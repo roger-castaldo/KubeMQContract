@@ -1,11 +1,13 @@
 ﻿using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
+using KubeMQ.Contract.Attributes;
 using KubeMQ.Contract.Interfaces;
 using KubeMQ.Contract.SDK;
 using KubeMQ.Contract.SDK.Grpc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -20,15 +22,17 @@ namespace KubeMQ.Contract
         private readonly Action<T> messageRecieved;
         private readonly Action<string> errorRecieved;
         private readonly CancellationTokenSource cancellationToken;
+        private readonly long storageOffset;
         private bool active=true;
 
-        public EventSubscription(KubeSubscription subscription,kubemq.kubemqClient client, ConnectionOptions options, Action<T> messageRecieved, Action<string> errorRecieved, CancellationToken cancellationToken)
+        public EventSubscription(KubeSubscription subscription,kubemq.kubemqClient client, ConnectionOptions options, Action<T> messageRecieved, Action<string> errorRecieved, CancellationToken cancellationToken,long storageOffset)
         {
             this.subscription=subscription;
             this.client=client;
             this.options=options;
             this.messageRecieved=messageRecieved;
             this.errorRecieved=errorRecieved;
+            this.storageOffset=storageOffset;
             this.cancellationToken = new CancellationTokenSource();
 
             cancellationToken.Register(() => {
@@ -41,6 +45,9 @@ namespace KubeMQ.Contract
 
         private async Task start()
         {
+            var eventType = Subscribe.Types.SubscribeType.Events;
+            if (typeof(T).GetCustomAttributes<StoredMessage>().Any())
+                eventType = Subscribe.Types.SubscribeType.EventsStore;
             while (active && !cancellationToken.IsCancellationRequested)
             {
                 try
@@ -50,7 +57,9 @@ namespace KubeMQ.Contract
                             Channel=subscription.Channel,
                             ClientID=subscription.ClientID,
                             Group=subscription.Group,
-                            SubscribeTypeData=Subscribe.Types.SubscribeType.Events
+                            SubscribeTypeData=eventType,
+                            EventsStoreTypeData=typeof(T).GetCustomAttributes<StoredMessage>().Select(sm=>sm.EventsStoreType).FirstOrDefault(Subscribe.Types.EventsStoreType.Undefined),
+                            EventsStoreTypeValue=storageOffset
                         },
                         options.GrpcMetadata,
                         null, this.cancellationToken.Token))

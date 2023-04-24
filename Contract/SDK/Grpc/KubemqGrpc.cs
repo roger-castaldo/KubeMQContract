@@ -10,7 +10,7 @@ using grpc = global::Grpc.Core;
 
 namespace KubeMQ.Contract.SDK.Grpc
 {
-  public static partial class kubemq
+  internal static partial class kubemq
   {
     static readonly string __ServiceName = "kubemq.kubemq";
 
@@ -127,13 +127,13 @@ namespace KubeMQ.Contract.SDK.Grpc
         __Marshaller_PollResponse);
 
     /// <summary>Service descriptor</summary>
-    public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
+    internal static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
       get { return global::KubeMQ.Contract.SDK.Grpc.KubemqReflection.Descriptor.Services[0]; }
     }
 
     /// <summary>Base class for server-side implementations of kubemq</summary>
-    public abstract partial class kubemqBase
+    internal abstract partial class kubemqBase
     {
       public virtual global::System.Threading.Tasks.Task<global::KubeMQ.Contract.SDK.Grpc.Result> SendEvent(global::KubeMQ.Contract.SDK.Grpc.Event request, grpc::ServerCallContext context)
       {
@@ -402,7 +402,7 @@ namespace KubeMQ.Contract.SDK.Grpc
 
     /// <summary>Creates service definition that can be registered with a server</summary>
     /// <param name="serviceImpl">An object implementing the server-side handling logic.</param>
-    public static grpc::ServerServiceDefinition BindService(kubemqBase serviceImpl)
+    internal static grpc::ServerServiceDefinition BindService(kubemqBase serviceImpl)
     {
       return grpc::ServerServiceDefinition.CreateBuilder()
           .AddMethod(__Method_SendEvent, serviceImpl.SendEvent)

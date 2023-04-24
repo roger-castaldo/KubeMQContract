@@ -34,6 +34,8 @@ namespace KubeMQ.Contract.SDK
         private readonly MapField<string, string> _tags;
         public MapField<string, string> Tags => _tags;
 
+        public bool Stored => typeof(T).GetCustomAttributes<StoredMessage>().FirstOrDefault()!=null;
+
         public KubeMessage(T message,ConnectionOptions connectionOptions,string? channel=null)
         {
             _tags = new MapField<string, string>();

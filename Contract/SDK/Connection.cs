@@ -21,41 +21,54 @@ namespace KubeMQ.Contract.SDK.Grpc
             this.subscriptions = new();
         }
 
-        public PingResult Ping()
+        public IPingResult Ping()
         {
-            PingResult rec = this.client.Ping(new Empty());
-            return rec;
+            var rec = this.client.Ping(new Empty());
+            return new KubeMQ.Contract.SDK.PingResult(rec);
         }
 
-        public string PublishMessage<T>(T message,CancellationToken cancellationToken = new CancellationToken(), string? channel=null){
+        public ITransmissionResult Send<T>(T message,CancellationToken cancellationToken = new CancellationToken(), string? channel=null){
             try
             {
                 var msg = new KubeMessage<T>(message, connectionOptions, channel);
-                client.SendEvent(new Event
+                var res = client.SendEvent(new Event
                 {
                     EventID = msg.ID,
                     ClientID = msg.ClientID,
                     Channel = msg.Channel,
                     Metadata = msg.MetaData,
                     Body = ByteString.CopyFrom(msg.Body),
-                    Store = false,
-                    Tags = { msg.Tags}
+                    Store = msg.Stored,
+                    Tags = { msg.Tags }
                 }, connectionOptions.GrpcMetadata, null, cancellationToken);
-                return msg.ID;
+                return new MessageResult()
+                {
+                    MessageID=new Guid(msg.ID),
+                    IsError = !string.IsNullOrEmpty(res.Error),
+                    Error=res.Error
+                };
             }
             catch (RpcException ex)
             {
-                throw new RpcException(ex.Status);
+                return new MessageResult()
+                {
+                    IsError=true,
+                    Error=$"Message: {ex.Message}, Status: {ex.Status}"
+                };
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message);
+                return new MessageResult()
+                {
+                    IsError=true,
+                    Error=ex.Message
+                };
             }
         }
 
-        public Guid Subscribe<T>(Action<T> messageRecieved,Action<string> errorRecieved, CancellationToken cancellationToken = new CancellationToken(),string? channel=null,string group = "")
+        public Guid Subscribe<T>(Action<T> messageRecieved,Action<string> errorRecieved, CancellationToken cancellationToken = new CancellationToken(),string? channel=null,string group = "", long storageOffset = 0)
         {
-            var sub = new EventSubscription<T>(new KubeSubscription(typeof(T),this.connectionOptions,channel:channel,group:group),this.client,this.connectionOptions,messageRecieved,errorRecieved,cancellationToken);
+            var sub = new EventSubscription<T>(new KubeSubscription(typeof(T),this.connectionOptions,channel:channel,group:group),this.client,this.connectionOptions,messageRecieved,errorRecieved,cancellationToken,storageOffset);
             lock (subscriptions)
             {
                 subscriptions.Add(sub);

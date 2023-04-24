@@ -12,11 +12,11 @@ using scg = global::System.Collections.Generic;
 namespace KubeMQ.Contract.SDK.Grpc{
 
   /// <summary>Holder for reflection information generated from kubemq.proto</summary>
-  public static partial class KubemqReflection {
+  internal static partial class KubemqReflection {
 
     #region Descriptor
     /// <summary>File descriptor for kubemq.proto</summary>
-    public static pbr::FileDescriptor Descriptor {
+    internal static pbr::FileDescriptor Descriptor {
       get { return descriptor; }
     }
     private static pbr::FileDescriptor descriptor;
@@ -177,7 +177,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
 
   }
   #region Enums
-  public enum StreamRequestType {
+  internal enum StreamRequestType {
     [pbr::OriginalName("StreamRequestTypeUnknown")] Unknown = 0,
     [pbr::OriginalName("ReceiveMessage")] ReceiveMessage = 1,
     [pbr::OriginalName("AckMessage")] AckMessage = 2,
@@ -187,7 +187,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
     [pbr::OriginalName("SendModifiedMessage")] SendModifiedMessage = 6,
   }
 
-  public enum PollRequestType {
+  internal enum PollRequestType {
     [pbr::OriginalName("PollRequestTypeUnknown")] Unknown = 0,
     [pbr::OriginalName("Get")] Get = 1,
     [pbr::OriginalName("AckAll")] AckAll = 2,
@@ -198,7 +198,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
   #endregion
 
   #region Messages
-  public sealed partial class PingResult : pb::IMessage<PingResult>
+  internal sealed partial class PingResult : pb::IMessage<PingResult>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -206,10 +206,10 @@ namespace KubeMQ.Contract.SDK.Grpc{
     private static readonly pb::MessageParser<PingResult> _parser = new pb::MessageParser<PingResult>(() => new PingResult());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<PingResult> Parser { get { return _parser; } }
+    internal static pb::MessageParser<PingResult> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
+    internal static pbr::MessageDescriptor Descriptor {
       get { return global::KubeMQ.Contract.SDK.Grpc.KubemqReflection.Descriptor.MessageTypes[0]; }
     }
 
@@ -478,7 +478,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
 
   }
 
-  public sealed partial class Empty : pb::IMessage<Empty>
+  internal sealed partial class Empty : pb::IMessage<Empty>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -486,10 +486,10 @@ namespace KubeMQ.Contract.SDK.Grpc{
     private static readonly pb::MessageParser<Empty> _parser = new pb::MessageParser<Empty>(() => new Empty());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<Empty> Parser { get { return _parser; } }
+    internal static pb::MessageParser<Empty> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
+    internal static pbr::MessageDescriptor Descriptor {
       get { return global::KubeMQ.Contract.SDK.Grpc.KubemqReflection.Descriptor.MessageTypes[1]; }
     }
 
@@ -614,7 +614,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
 
   }
 
-  public sealed partial class Result : pb::IMessage<Result>
+  internal sealed partial class Result : pb::IMessage<Result>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -622,10 +622,10 @@ namespace KubeMQ.Contract.SDK.Grpc{
     private static readonly pb::MessageParser<Result> _parser = new pb::MessageParser<Result>(() => new Result());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<Result> Parser { get { return _parser; } }
+    internal static pb::MessageParser<Result> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
+    internal static pbr::MessageDescriptor Descriptor {
       get { return global::KubeMQ.Contract.SDK.Grpc.KubemqReflection.Descriptor.MessageTypes[2]; }
     }
 
@@ -858,7 +858,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
 
   }
 
-  public sealed partial class Event : pb::IMessage<Event>
+  internal sealed partial class Event : pb::IMessage<Event>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -866,10 +866,10 @@ namespace KubeMQ.Contract.SDK.Grpc{
     private static readonly pb::MessageParser<Event> _parser = new pb::MessageParser<Event>(() => new Event());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<Event> Parser { get { return _parser; } }
+    internal static pb::MessageParser<Event> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
+    internal static pbr::MessageDescriptor Descriptor {
       get { return global::KubeMQ.Contract.SDK.Grpc.KubemqReflection.Descriptor.MessageTypes[3]; }
     }
 
@@ -1235,7 +1235,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
 
   }
 
-  public sealed partial class EventReceive : pb::IMessage<EventReceive>
+  internal sealed partial class EventReceive : pb::IMessage<EventReceive>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -1243,10 +1243,10 @@ namespace KubeMQ.Contract.SDK.Grpc{
     private static readonly pb::MessageParser<EventReceive> _parser = new pb::MessageParser<EventReceive>(() => new EventReceive());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<EventReceive> Parser { get { return _parser; } }
+    internal static pb::MessageParser<EventReceive> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
+    internal static pbr::MessageDescriptor Descriptor {
       get { return global::KubeMQ.Contract.SDK.Grpc.KubemqReflection.Descriptor.MessageTypes[4]; }
     }
 
@@ -1612,7 +1612,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
 
   }
 
-  public sealed partial class Subscribe : pb::IMessage<Subscribe>
+  internal sealed partial class Subscribe : pb::IMessage<Subscribe>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -1620,10 +1620,10 @@ namespace KubeMQ.Contract.SDK.Grpc{
     private static readonly pb::MessageParser<Subscribe> _parser = new pb::MessageParser<Subscribe>(() => new Subscribe());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<Subscribe> Parser { get { return _parser; } }
+    internal static pb::MessageParser<Subscribe> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
+    internal static pbr::MessageDescriptor Descriptor {
       get { return global::KubeMQ.Contract.SDK.Grpc.KubemqReflection.Descriptor.MessageTypes[5]; }
     }
 
@@ -1965,8 +1965,8 @@ namespace KubeMQ.Contract.SDK.Grpc{
     #region Nested types
     /// <summary>Container for nested types declared in the Subscribe message type.</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static partial class Types {
-      public enum SubscribeType {
+    internal static partial class Types {
+      internal enum SubscribeType {
         [pbr::OriginalName("SubscribeTypeUndefined")] Undefined = 0,
         [pbr::OriginalName("Events")] Events = 1,
         [pbr::OriginalName("EventsStore")] EventsStore = 2,
@@ -1974,7 +1974,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
         [pbr::OriginalName("Queries")] Queries = 4,
       }
 
-      public enum EventsStoreType {
+      internal enum EventsStoreType {
         [pbr::OriginalName("EventsStoreTypeUndefined")] Undefined = 0,
         [pbr::OriginalName("StartNewOnly")] StartNewOnly = 1,
         [pbr::OriginalName("StartFromFirst")] StartFromFirst = 2,
@@ -1989,7 +1989,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
 
   }
 
-  public sealed partial class Request : pb::IMessage<Request>
+  internal sealed partial class Request : pb::IMessage<Request>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -1997,10 +1997,10 @@ namespace KubeMQ.Contract.SDK.Grpc{
     private static readonly pb::MessageParser<Request> _parser = new pb::MessageParser<Request>(() => new Request());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<Request> Parser { get { return _parser; } }
+    internal static pb::MessageParser<Request> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
+    internal static pbr::MessageDescriptor Descriptor {
       get { return global::KubeMQ.Contract.SDK.Grpc.KubemqReflection.Descriptor.MessageTypes[6]; }
     }
 
@@ -2547,8 +2547,8 @@ namespace KubeMQ.Contract.SDK.Grpc{
     #region Nested types
     /// <summary>Container for nested types declared in the Request message type.</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static partial class Types {
-      public enum RequestType {
+    internal static partial class Types {
+      internal enum RequestType {
         [pbr::OriginalName("RequestTypeUnknown")] Unknown = 0,
         [pbr::OriginalName("Command")] Command = 1,
         [pbr::OriginalName("Query")] Query = 2,
@@ -2559,7 +2559,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
 
   }
 
-  public sealed partial class Response : pb::IMessage<Response>
+  internal sealed partial class Response : pb::IMessage<Response>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -2567,10 +2567,10 @@ namespace KubeMQ.Contract.SDK.Grpc{
     private static readonly pb::MessageParser<Response> _parser = new pb::MessageParser<Response>(() => new Response());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<Response> Parser { get { return _parser; } }
+    internal static pb::MessageParser<Response> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
+    internal static pbr::MessageDescriptor Descriptor {
       get { return global::KubeMQ.Contract.SDK.Grpc.KubemqReflection.Descriptor.MessageTypes[7]; }
     }
 
@@ -3080,7 +3080,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
 
   }
 
-  public sealed partial class QueueMessage : pb::IMessage<QueueMessage>
+  internal sealed partial class QueueMessage : pb::IMessage<QueueMessage>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -3088,10 +3088,10 @@ namespace KubeMQ.Contract.SDK.Grpc{
     private static readonly pb::MessageParser<QueueMessage> _parser = new pb::MessageParser<QueueMessage>(() => new QueueMessage());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<QueueMessage> Parser { get { return _parser; } }
+    internal static pb::MessageParser<QueueMessage> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
+    internal static pbr::MessageDescriptor Descriptor {
       get { return global::KubeMQ.Contract.SDK.Grpc.KubemqReflection.Descriptor.MessageTypes[8]; }
     }
 
@@ -3511,7 +3511,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
 
   }
 
-  public sealed partial class QueueMessagesBatchRequest : pb::IMessage<QueueMessagesBatchRequest>
+  internal sealed partial class QueueMessagesBatchRequest : pb::IMessage<QueueMessagesBatchRequest>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -3519,10 +3519,10 @@ namespace KubeMQ.Contract.SDK.Grpc{
     private static readonly pb::MessageParser<QueueMessagesBatchRequest> _parser = new pb::MessageParser<QueueMessagesBatchRequest>(() => new QueueMessagesBatchRequest());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<QueueMessagesBatchRequest> Parser { get { return _parser; } }
+    internal static pb::MessageParser<QueueMessagesBatchRequest> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
+    internal static pbr::MessageDescriptor Descriptor {
       get { return global::KubeMQ.Contract.SDK.Grpc.KubemqReflection.Descriptor.MessageTypes[9]; }
     }
 
@@ -3708,7 +3708,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
 
   }
 
-  public sealed partial class QueueMessagesBatchResponse : pb::IMessage<QueueMessagesBatchResponse>
+  internal sealed partial class QueueMessagesBatchResponse : pb::IMessage<QueueMessagesBatchResponse>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -3716,10 +3716,10 @@ namespace KubeMQ.Contract.SDK.Grpc{
     private static readonly pb::MessageParser<QueueMessagesBatchResponse> _parser = new pb::MessageParser<QueueMessagesBatchResponse>(() => new QueueMessagesBatchResponse());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<QueueMessagesBatchResponse> Parser { get { return _parser; } }
+    internal static pb::MessageParser<QueueMessagesBatchResponse> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
+    internal static pbr::MessageDescriptor Descriptor {
       get { return global::KubeMQ.Contract.SDK.Grpc.KubemqReflection.Descriptor.MessageTypes[10]; }
     }
 
@@ -3941,7 +3941,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
 
   }
 
-  public sealed partial class QueueMessageAttributes : pb::IMessage<QueueMessageAttributes>
+  internal sealed partial class QueueMessageAttributes : pb::IMessage<QueueMessageAttributes>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -3949,10 +3949,10 @@ namespace KubeMQ.Contract.SDK.Grpc{
     private static readonly pb::MessageParser<QueueMessageAttributes> _parser = new pb::MessageParser<QueueMessageAttributes>(() => new QueueMessageAttributes());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<QueueMessageAttributes> Parser { get { return _parser; } }
+    internal static pb::MessageParser<QueueMessageAttributes> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
+    internal static pbr::MessageDescriptor Descriptor {
       get { return global::KubeMQ.Contract.SDK.Grpc.KubemqReflection.Descriptor.MessageTypes[11]; }
     }
 
@@ -4365,7 +4365,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
 
   }
 
-  public sealed partial class QueueMessagePolicy : pb::IMessage<QueueMessagePolicy>
+  internal sealed partial class QueueMessagePolicy : pb::IMessage<QueueMessagePolicy>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -4373,10 +4373,10 @@ namespace KubeMQ.Contract.SDK.Grpc{
     private static readonly pb::MessageParser<QueueMessagePolicy> _parser = new pb::MessageParser<QueueMessagePolicy>(() => new QueueMessagePolicy());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<QueueMessagePolicy> Parser { get { return _parser; } }
+    internal static pb::MessageParser<QueueMessagePolicy> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
+    internal static pbr::MessageDescriptor Descriptor {
       get { return global::KubeMQ.Contract.SDK.Grpc.KubemqReflection.Descriptor.MessageTypes[12]; }
     }
 
@@ -4645,7 +4645,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
 
   }
 
-  public sealed partial class SendQueueMessageResult : pb::IMessage<SendQueueMessageResult>
+  internal sealed partial class SendQueueMessageResult : pb::IMessage<SendQueueMessageResult>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -4653,10 +4653,10 @@ namespace KubeMQ.Contract.SDK.Grpc{
     private static readonly pb::MessageParser<SendQueueMessageResult> _parser = new pb::MessageParser<SendQueueMessageResult>(() => new SendQueueMessageResult());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<SendQueueMessageResult> Parser { get { return _parser; } }
+    internal static pb::MessageParser<SendQueueMessageResult> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
+    internal static pbr::MessageDescriptor Descriptor {
       get { return global::KubeMQ.Contract.SDK.Grpc.KubemqReflection.Descriptor.MessageTypes[13]; }
     }
 
@@ -4997,7 +4997,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
 
   }
 
-  public sealed partial class ReceiveQueueMessagesRequest : pb::IMessage<ReceiveQueueMessagesRequest>
+  internal sealed partial class ReceiveQueueMessagesRequest : pb::IMessage<ReceiveQueueMessagesRequest>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -5005,10 +5005,10 @@ namespace KubeMQ.Contract.SDK.Grpc{
     private static readonly pb::MessageParser<ReceiveQueueMessagesRequest> _parser = new pb::MessageParser<ReceiveQueueMessagesRequest>(() => new ReceiveQueueMessagesRequest());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<ReceiveQueueMessagesRequest> Parser { get { return _parser; } }
+    internal static pb::MessageParser<ReceiveQueueMessagesRequest> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
+    internal static pbr::MessageDescriptor Descriptor {
       get { return global::KubeMQ.Contract.SDK.Grpc.KubemqReflection.Descriptor.MessageTypes[14]; }
     }
 
@@ -5349,7 +5349,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
 
   }
 
-  public sealed partial class ReceiveQueueMessagesResponse : pb::IMessage<ReceiveQueueMessagesResponse>
+  internal sealed partial class ReceiveQueueMessagesResponse : pb::IMessage<ReceiveQueueMessagesResponse>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -5357,10 +5357,10 @@ namespace KubeMQ.Contract.SDK.Grpc{
     private static readonly pb::MessageParser<ReceiveQueueMessagesResponse> _parser = new pb::MessageParser<ReceiveQueueMessagesResponse>(() => new ReceiveQueueMessagesResponse());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<ReceiveQueueMessagesResponse> Parser { get { return _parser; } }
+    internal static pb::MessageParser<ReceiveQueueMessagesResponse> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
+    internal static pbr::MessageDescriptor Descriptor {
       get { return global::KubeMQ.Contract.SDK.Grpc.KubemqReflection.Descriptor.MessageTypes[15]; }
     }
 
@@ -5726,7 +5726,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
 
   }
 
-  public sealed partial class AckAllQueueMessagesRequest : pb::IMessage<AckAllQueueMessagesRequest>
+  internal sealed partial class AckAllQueueMessagesRequest : pb::IMessage<AckAllQueueMessagesRequest>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -5734,10 +5734,10 @@ namespace KubeMQ.Contract.SDK.Grpc{
     private static readonly pb::MessageParser<AckAllQueueMessagesRequest> _parser = new pb::MessageParser<AckAllQueueMessagesRequest>(() => new AckAllQueueMessagesRequest());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<AckAllQueueMessagesRequest> Parser { get { return _parser; } }
+    internal static pb::MessageParser<AckAllQueueMessagesRequest> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
+    internal static pbr::MessageDescriptor Descriptor {
       get { return global::KubeMQ.Contract.SDK.Grpc.KubemqReflection.Descriptor.MessageTypes[16]; }
     }
 
@@ -6006,7 +6006,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
 
   }
 
-  public sealed partial class AckAllQueueMessagesResponse : pb::IMessage<AckAllQueueMessagesResponse>
+  internal sealed partial class AckAllQueueMessagesResponse : pb::IMessage<AckAllQueueMessagesResponse>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -6014,10 +6014,10 @@ namespace KubeMQ.Contract.SDK.Grpc{
     private static readonly pb::MessageParser<AckAllQueueMessagesResponse> _parser = new pb::MessageParser<AckAllQueueMessagesResponse>(() => new AckAllQueueMessagesResponse());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<AckAllQueueMessagesResponse> Parser { get { return _parser; } }
+    internal static pb::MessageParser<AckAllQueueMessagesResponse> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
+    internal static pbr::MessageDescriptor Descriptor {
       get { return global::KubeMQ.Contract.SDK.Grpc.KubemqReflection.Descriptor.MessageTypes[17]; }
     }
 
@@ -6286,7 +6286,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
 
   }
 
-  public sealed partial class StreamQueueMessagesRequest : pb::IMessage<StreamQueueMessagesRequest>
+  internal sealed partial class StreamQueueMessagesRequest : pb::IMessage<StreamQueueMessagesRequest>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -6294,10 +6294,10 @@ namespace KubeMQ.Contract.SDK.Grpc{
     private static readonly pb::MessageParser<StreamQueueMessagesRequest> _parser = new pb::MessageParser<StreamQueueMessagesRequest>(() => new StreamQueueMessagesRequest());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<StreamQueueMessagesRequest> Parser { get { return _parser; } }
+    internal static pb::MessageParser<StreamQueueMessagesRequest> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
+    internal static pbr::MessageDescriptor Descriptor {
       get { return global::KubeMQ.Contract.SDK.Grpc.KubemqReflection.Descriptor.MessageTypes[18]; }
     }
 
@@ -6719,7 +6719,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
 
   }
 
-  public sealed partial class StreamQueueMessagesResponse : pb::IMessage<StreamQueueMessagesResponse>
+  internal sealed partial class StreamQueueMessagesResponse : pb::IMessage<StreamQueueMessagesResponse>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -6727,10 +6727,10 @@ namespace KubeMQ.Contract.SDK.Grpc{
     private static readonly pb::MessageParser<StreamQueueMessagesResponse> _parser = new pb::MessageParser<StreamQueueMessagesResponse>(() => new StreamQueueMessagesResponse());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<StreamQueueMessagesResponse> Parser { get { return _parser; } }
+    internal static pb::MessageParser<StreamQueueMessagesResponse> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
+    internal static pbr::MessageDescriptor Descriptor {
       get { return global::KubeMQ.Contract.SDK.Grpc.KubemqReflection.Descriptor.MessageTypes[19]; }
     }
 
@@ -7044,7 +7044,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
 
   }
 
-  public sealed partial class PollRequest : pb::IMessage<PollRequest>
+  internal sealed partial class PollRequest : pb::IMessage<PollRequest>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -7052,10 +7052,10 @@ namespace KubeMQ.Contract.SDK.Grpc{
     private static readonly pb::MessageParser<PollRequest> _parser = new pb::MessageParser<PollRequest>(() => new PollRequest());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<PollRequest> Parser { get { return _parser; } }
+    internal static pb::MessageParser<PollRequest> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
+    internal static pbr::MessageDescriptor Descriptor {
       get { return global::KubeMQ.Contract.SDK.Grpc.KubemqReflection.Descriptor.MessageTypes[20]; }
     }
 
@@ -7448,7 +7448,7 @@ namespace KubeMQ.Contract.SDK.Grpc{
 
   }
 
-  public sealed partial class PollResponse : pb::IMessage<PollResponse>
+  internal sealed partial class PollResponse : pb::IMessage<PollResponse>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -7456,10 +7456,10 @@ namespace KubeMQ.Contract.SDK.Grpc{
     private static readonly pb::MessageParser<PollResponse> _parser = new pb::MessageParser<PollResponse>(() => new PollResponse());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<PollResponse> Parser { get { return _parser; } }
+    internal static pb::MessageParser<PollResponse> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
+    internal static pbr::MessageDescriptor Descriptor {
       get { return global::KubeMQ.Contract.SDK.Grpc.KubemqReflection.Descriptor.MessageTypes[21]; }
     }
 

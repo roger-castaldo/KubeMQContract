@@ -9,9 +9,16 @@ namespace KubeMQ.Contract.Interfaces
 {
     public interface IConnection
     {
-        PingResult Ping();
-        string PublishMessage<T>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null);
-        Guid Subscribe<T>(Action<T> messageRecieved, Action<string> errorRecieved, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, string group = "");
+        IPingResult Ping();
+        ITransmissionResult Send<T>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null);
+
+        Guid Subscribe<T>(
+            Action<T> messageRecieved, 
+            Action<string> errorRecieved, 
+            CancellationToken cancellationToken = new CancellationToken(), 
+            string? channel = null, 
+            string group = "",
+            long storageOffset=0);
         void Unsubscribe(Guid id);
     }
 }
