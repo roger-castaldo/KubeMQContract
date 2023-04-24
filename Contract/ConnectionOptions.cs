@@ -1,11 +1,13 @@
 ﻿using Grpc.Core;
+using KubeMQ.Contract.Interfaces;
+using KubeMQ.Contract.SDK.Grpc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KubeMQ.Contract.SDK.Grpc
+namespace KubeMQ.Contract
 {
     public class ConnectionOptions
     {
@@ -54,5 +56,10 @@ namespace KubeMQ.Contract.SDK.Grpc
             }
         }
 
+
+        public IConnection EstablishConnection()
+        {
+            return new Connection(this);
+        }
     }
 }

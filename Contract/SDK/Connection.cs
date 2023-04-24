@@ -5,7 +5,7 @@ using System;
 
 namespace KubeMQ.Contract.SDK.Grpc
 {
-    public class Connection
+    internal class Connection : IConnection
     {
         private readonly ConnectionOptions connectionOptions;
         private readonly kubemq.kubemqClient client;
@@ -27,7 +27,7 @@ namespace KubeMQ.Contract.SDK.Grpc
             return rec;
         }
 
-        public string Send<T>(T message,CancellationToken cancellationToken = new CancellationToken(), string? channel=null){
+        public string PublishMessage<T>(T message,CancellationToken cancellationToken = new CancellationToken(), string? channel=null){
             try
             {
                 var msg = new KubeMessage<T>(message, connectionOptions, channel);

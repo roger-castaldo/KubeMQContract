@@ -1,5 +1,4 @@
 ﻿using KubeMQ.Contract.Attributes;
-using KubeMQ.Contract.SDK.Grpc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
