@@ -41,6 +41,20 @@ namespace KubeMQ.Contract.SDK.Messages
             }
         }
 
+        public QueueMessageAttributes Attributes { 
+            get
+            {
+                var result = new QueueMessageAttributes();
+                if (delaySeconds!=null)
+                    result.DelayedTo = Utility.ToUnixTime(DateTime.Now.AddSeconds(delaySeconds.Value));
+                if (expirationSeconds!=null)
+                    result.ExpirationAt = Utility.ToUnixTime(DateTime.Now.AddSeconds(expirationSeconds.Value));
+                if (maxCount!=null)
+                    result.ReceiveCount = maxCount.Value;
+                return result;
+            }
+        }
+
         public KubeEnqueue(T message, ConnectionOptions connectionOptions, string? channel = null,int? delaySeconds=null, int? expirationSeconds = null, int? maxCount = null, string? maxCountChannel = null) 
             : base(message, connectionOptions, channel)
         {

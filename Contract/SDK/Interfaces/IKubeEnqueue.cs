@@ -14,5 +14,6 @@ namespace KubeMQ.Contract.SDK.Interfaces
         int? MaxSize { get; }
         string? MaxCountChannel { get; }
         QueueMessagePolicy Policy { get; }
+        QueueMessageAttributes Attributes { get; }
     }
 }

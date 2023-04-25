@@ -128,7 +128,8 @@ namespace KubeMQ.Contract.SDK.Grpc
                     Metadata = msg.MetaData,
                     Body = ByteString.CopyFrom(msg.Body),
                     Tags = { msg.Tags },
-                    Policy = msg.Policy
+                    Policy = msg.Policy,
+                    Attributes = msg.Attributes
                 }, connectionOptions.GrpcMetadata, null, cancellationToken);
                 return new TransmissionResult()
                 {
