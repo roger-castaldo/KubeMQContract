@@ -76,6 +76,11 @@ namespace KubeMQ.Contract
             return ConvertMessage<T>(msg.Metadata, msg.Body);
         }
 
+        public static T? ConvertMessage<T>(QueueMessage msg)
+        {
+            return ConvertMessage<T>(msg.Metadata, msg.Body);
+        }
+
         public static long ToUnixTime(DateTime timestamp)
         {
             var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);

@@ -5,10 +5,11 @@ using KubeMQ.Contract.Messages;
 using KubeMQ.Contract.SDK.Messages;
 using KubeMQ.Contract.Subscriptions;
 using System;
+using System.Linq;
 
 namespace KubeMQ.Contract.SDK.Grpc
 {
-    internal class Connection : IConnection
+    internal class Connection : IConnection,IDisposable
     {
         private readonly ConnectionOptions connectionOptions;
         private readonly kubemq.kubemqClient client;
@@ -30,11 +31,11 @@ namespace KubeMQ.Contract.SDK.Grpc
             return new KubeMQ.Contract.SDK.PingResult(rec);
         }
 
-        public ITransmissionResult Send<T>(T message,CancellationToken cancellationToken = new CancellationToken(), string? channel=null){
+        public async Task<ITransmissionResult> Send<T>(T message,CancellationToken cancellationToken = new CancellationToken(), string? channel=null){
             try
             {
                 var msg = new KubeEvent<T>(message, connectionOptions, channel);
-                var res = client.SendEvent(new Event
+                var res = await client.SendEventAsync(new Event
                 {
                     EventID = msg.ID,
                     ClientID = msg.ClientID,
@@ -114,6 +115,89 @@ namespace KubeMQ.Contract.SDK.Grpc
             }
         }
 
+        public async Task<ITransmissionResult> EnqueueMessage<T>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, int? expirationSeconds = null, int? delaySeconds = null, int? maxQueueSize = null, string? maxQueueChannel = null)
+        {
+            try
+            {
+                var msg = new KubeEnqueue<T>(message, connectionOptions, channel:channel,delaySeconds:delaySeconds,expirationSeconds:expirationSeconds,maxCount:maxQueueSize,maxCountChannel:maxQueueChannel);
+                var res = await client.SendQueueMessageAsync(new QueueMessage()
+                {
+                    MessageID= msg.ID,
+                    ClientID = msg.ClientID,
+                    Channel = msg.Channel,
+                    Metadata = msg.MetaData,
+                    Body = ByteString.CopyFrom(msg.Body),
+                    Tags = { msg.Tags },
+                    Policy = msg.Policy
+                }, connectionOptions.GrpcMetadata, null, cancellationToken);
+                return new TransmissionResult()
+                {
+                    MessageID=new Guid(msg.ID),
+                    IsError = !string.IsNullOrEmpty(res.Error),
+                    Error=res.Error
+                };
+            }
+            catch (RpcException ex)
+            {
+                return new TransmissionResult()
+                {
+                    IsError=true,
+                    Error=$"Message: {ex.Message}, Status: {ex.Status}"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new TransmissionResult()
+                {
+                    IsError=true,
+                    Error=ex.Message
+                };
+            }
+        }
+
+        public async Task<IBatchTransmissionResult> EnqueueMessages<T>(IEnumerable<T> messages, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, int? expirationSeconds = null, int? delaySeconds = null, int? maxQueueSize = null, string? maxQueueChannel = null)
+        {
+            try
+            {
+                var msg = new KubeBatchEnqueue<T>(messages, connectionOptions, channel: channel, delaySeconds: delaySeconds, expirationSeconds: expirationSeconds, maxCount: maxQueueSize, maxCountChannel: maxQueueChannel);
+                var res = await client.SendQueueMessagesBatchAsync(
+                    new QueueMessagesBatchRequest()
+                    {
+                        BatchID=msg.ID.ToString(),
+                        Messages={ msg.Messages }
+                    }, connectionOptions.GrpcMetadata, null, cancellationToken);
+                return new BatchTransmissionResult()
+                {
+                    MessageID=msg.ID,
+                    Results=res.Results.AsEnumerable<SendQueueMessageResult>().Select(sqmr =>
+                    {
+                        return new TransmissionResult()
+                        {
+                            MessageID=new Guid(sqmr.MessageID),
+                            IsError = !string.IsNullOrEmpty(sqmr.Error),
+                            Error=sqmr.Error
+                        };
+                    })
+                };
+            }
+            catch (RpcException ex)
+            {
+                return new BatchTransmissionResult()
+                {
+                    IsError=true,
+                    Error=$"Message: {ex.Message}, Status: {ex.Status}"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new BatchTransmissionResult()
+                {
+                    IsError=true,
+                    Error=ex.Message
+                };
+            }
+        }
+
         public Guid Subscribe<T>(Action<T> messageRecieved,Action<string> errorRecieved, CancellationToken cancellationToken = new CancellationToken(),string? channel=null,string group = "", long storageOffset = 0)
         {
             var sub = new EventSubscription<T>(new KubeSubscription(typeof(T),this.connectionOptions,channel:channel,group:group),this.client,this.connectionOptions,messageRecieved,errorRecieved,cancellationToken,storageOffset);
@@ -143,6 +227,11 @@ namespace KubeMQ.Contract.SDK.Grpc
             return sub.ID;
         }
 
+        public IMessageQueue<T> SubscribeToQueue<T>(CancellationToken cancellationToken = default, string? channel = null)
+        {
+            return new MessageQueue<T>(connectionOptions, client, channel: channel);
+        }
+
         public void Unsubscribe(Guid id)
         {
             lock (subscriptions)
@@ -153,6 +242,18 @@ namespace KubeMQ.Contract.SDK.Grpc
                     sub.Stop();
                     subscriptions.Remove(sub);
                 }
+            }
+        }
+
+        public void Dispose()
+        {
+            lock (subscriptions)
+            {
+                foreach (var sub in subscriptions)
+                {
+                    sub.Stop();
+                }
+                subscriptions.Clear();
             }
         }
     }
