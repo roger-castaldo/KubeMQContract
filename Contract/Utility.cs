@@ -80,7 +80,7 @@ namespace KubeMQ.Contract
             bool isCompressed;
             if (IsMessageTypeMatch(metaData, typeof(T), out isCompressed))
             {
-                var stream = (isCompressed ? (Stream)new GZipStream(new MemoryStream(body.ToByteArray()), System.IO.Compression.CompressionLevel.SmallestSize) : (Stream)new MemoryStream(body.ToByteArray()));
+                var stream = (isCompressed ? (Stream)new GZipStream(new MemoryStream(body.ToByteArray()), System.IO.Compression.CompressionMode.Decompress) : (Stream)new MemoryStream(body.ToByteArray()));
                 return System.Text.Json.JsonSerializer.Deserialize<T>(stream);
             }else
                 return ConverterFactory.ConvertMessage<T>(metaData, body);
