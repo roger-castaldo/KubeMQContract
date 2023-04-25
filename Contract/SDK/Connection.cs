@@ -6,6 +6,7 @@ using KubeMQ.Contract.SDK.Messages;
 using KubeMQ.Contract.Subscriptions;
 using System;
 using System.Linq;
+using System.Reflection;
 
 namespace KubeMQ.Contract.SDK.Grpc
 {
@@ -32,6 +33,7 @@ namespace KubeMQ.Contract.SDK.Grpc
         }
 
         public async Task<ITransmissionResult> Send<T>(T message,CancellationToken cancellationToken = new CancellationToken(), string? channel=null){
+            ConverterFactory.RegisterAssembly(Assembly.GetCallingAssembly());
             try
             {
                 var msg = new KubeEvent<T>(message, connectionOptions, channel);
@@ -72,6 +74,7 @@ namespace KubeMQ.Contract.SDK.Grpc
 
         public async Task<Contract.Interfaces.IMessage<R>> SendRPC<T, R>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, int? timeout = null, RPCType? type = null)
         {
+            ConverterFactory.RegisterAssembly(Assembly.GetCallingAssembly());
             try
             {
                 var msg = new KubeRequest<T,R>(message, connectionOptions,timeout:timeout,channel:channel);
@@ -117,6 +120,7 @@ namespace KubeMQ.Contract.SDK.Grpc
 
         public async Task<ITransmissionResult> EnqueueMessage<T>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, int? expirationSeconds = null, int? delaySeconds = null, int? maxQueueSize = null, string? maxQueueChannel = null)
         {
+            ConverterFactory.RegisterAssembly(Assembly.GetCallingAssembly());
             try
             {
                 var msg = new KubeEnqueue<T>(message, connectionOptions, channel:channel,delaySeconds:delaySeconds,expirationSeconds:expirationSeconds,maxCount:maxQueueSize,maxCountChannel:maxQueueChannel);
@@ -158,6 +162,7 @@ namespace KubeMQ.Contract.SDK.Grpc
 
         public async Task<IBatchTransmissionResult> EnqueueMessages<T>(IEnumerable<T> messages, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, int? expirationSeconds = null, int? delaySeconds = null, int? maxQueueSize = null, string? maxQueueChannel = null)
         {
+            ConverterFactory.RegisterAssembly(Assembly.GetCallingAssembly());
             try
             {
                 var msg = new KubeBatchEnqueue<T>(messages, connectionOptions, channel: channel, delaySeconds: delaySeconds, expirationSeconds: expirationSeconds, maxCount: maxQueueSize, maxCountChannel: maxQueueChannel);
@@ -201,6 +206,7 @@ namespace KubeMQ.Contract.SDK.Grpc
 
         public Guid Subscribe<T>(Action<T> messageRecieved,Action<string> errorRecieved, CancellationToken cancellationToken = new CancellationToken(),string? channel=null,string group = "", long storageOffset = 0)
         {
+            ConverterFactory.RegisterAssembly(Assembly.GetCallingAssembly());
             var sub = new EventSubscription<T>(new KubeSubscription(typeof(T),this.connectionOptions,channel:channel,group:group),this.client,this.connectionOptions,messageRecieved,errorRecieved,cancellationToken,storageOffset);
             lock (subscriptions)
             {
@@ -218,6 +224,7 @@ namespace KubeMQ.Contract.SDK.Grpc
             RPCType? commandType = null
         )
         {
+            ConverterFactory.RegisterAssembly(Assembly.GetCallingAssembly());
             var sub = new RPCSubscription<T,R>(new KubeSubscription(typeof(T), this.connectionOptions, channel: channel, group: group), 
                 this.client, 
                 this.connectionOptions, processMessage, errorRecieved, cancellationToken, commandType:commandType);
@@ -230,6 +237,7 @@ namespace KubeMQ.Contract.SDK.Grpc
 
         public IMessageQueue<T> SubscribeToQueue<T>(CancellationToken cancellationToken = default, string? channel = null)
         {
+            ConverterFactory.RegisterAssembly(Assembly.GetCallingAssembly());
             return new MessageQueue<T>(connectionOptions, client, channel: channel);
         }
 

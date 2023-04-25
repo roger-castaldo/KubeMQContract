@@ -69,8 +69,15 @@ namespace KubeMQ.Contract.Subscriptions
                         {
                             if (active)
                             {
-                                var msg = Utility.ConvertMessage<T>(call.ResponseStream.Current);
-                                messageRecieved(msg);
+                                try
+                                {
+                                    var msg = Utility.ConvertMessage<T>(call.ResponseStream.Current);
+                                    messageRecieved(msg);
+                                }
+                                catch (Exception e)
+                                {
+                                    errorRecieved(e.Message);
+                                }
                             }
                         }
                     }

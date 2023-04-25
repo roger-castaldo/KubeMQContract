@@ -39,46 +39,70 @@ namespace KubeMQ.Contract
             }
             else
                 metaData="U";
-            metaData+=$"-{typeof(T).Name}-{typeof(T).GetCustomAttributes<MessageVersion>().Select(mc => mc.Version.ToString()).FirstOrDefault("0.0.0.0")}";
+            metaData+=$"-{typeof(T).GetCustomAttributes<MessageName>().Select(mn=>mn.Value).FirstOrDefault(typeof(T).Name)}-{typeof(T).GetCustomAttributes<MessageVersion>().Select(mc => mc.Version.ToString()).FirstOrDefault("0.0.0.0")}";
         }
 
-        private static readonly Regex regMetaData = new Regex(@"^(U|C)-([^-]+)-((\d+\.)*(\d+))$", RegexOptions.Compiled);
+        private static readonly Regex regMetaData = new Regex(@"^(U|C)-(.+)-((\d+\.)*(\d+))$", RegexOptions.Compiled);
 
-        private static T? ConvertMessage<T>(string? metaData, Google.Protobuf.ByteString body)
+        public static bool IsMessateTypeMatch(string metaData,Type t)
         {
-            if (metaData==null)
-                throw new ArgumentNullException(nameof(metaData));
+            bool tmp;
+            return IsMessageTypeMatch(metaData, t, out tmp);
+        }
+
+        private static bool IsMessageTypeMatch(string metaData,Type t,out bool isCompressed)
+        {
+            isCompressed=false;
             var match = regMetaData.Match(metaData);
             if (match.Success)
             {
-                var stream = (match.Groups[1].Value=="C" ? (Stream)new GZipStream(new MemoryStream(body.ToByteArray()), System.IO.Compression.CompressionLevel.SmallestSize) : (Stream)new MemoryStream(body.ToByteArray()));
-                if (match.Groups[2].Value!=typeof(T).Name
-                    || new Version(match.Groups[3].Value)!=new Version(typeof(T).GetCustomAttributes<MessageVersion>().Select(mc => mc.Version.ToString()).FirstOrDefault("0.0.0.0")))
-                    throw new InvalidCastException();
-                return System.Text.Json.JsonSerializer.Deserialize<T>(stream);
+                isCompressed=match.Groups[1].Value=="C";
+                if (match.Groups[2].Value==t.GetCustomAttributes<MessageName>().Select(mn => mn.Value).FirstOrDefault(t.Name)
+                    && new Version(match.Groups[3].Value)==new Version(t.GetCustomAttributes<MessageVersion>().Select(mc => mc.Version.ToString()).FirstOrDefault("0.0.0.0")))
+                    return true;
+
             }
             else
                 throw new InvalidDataException("MetaData is not valid");
+            return false;
         }
 
+        public static object? ConvertMessage(Type t, string metaData, Google.Protobuf.ByteString body)
+        {
+            return typeof(Utility).GetMethod("convertMessage",BindingFlags.Static|BindingFlags.NonPublic)
+                .MakeGenericMethod(new Type[] { t }).Invoke(null,new object[] {metaData, body});
+        }
+
+        private static T? convertMessage<T>(string? metaData, Google.Protobuf.ByteString body)
+        {
+            if (metaData==null)
+                throw new ArgumentNullException(nameof(metaData));
+            bool isCompressed;
+            if (IsMessageTypeMatch(metaData, typeof(T), out isCompressed))
+            {
+                var stream = (isCompressed ? (Stream)new GZipStream(new MemoryStream(body.ToByteArray()), System.IO.Compression.CompressionLevel.SmallestSize) : (Stream)new MemoryStream(body.ToByteArray()));
+                return System.Text.Json.JsonSerializer.Deserialize<T>(stream);
+            }else
+                return ConverterFactory.ConvertMessage<T>(metaData, body);
+        }
         public static T? ConvertMessage<T>(EventReceive msg)
         {
-            return ConvertMessage<T>(msg.Metadata,msg.Body);
+            return convertMessage<T>(msg.Metadata,msg.Body);
         }
 
         public static T? ConvertMessage<T>(Response msg)
         {
-            return ConvertMessage<T>(msg.Metadata, msg.Body);
+            return convertMessage<T>(msg.Metadata, msg.Body);
         }
 
         public static T? ConvertMessage<T>(Request msg)
         {
-            return ConvertMessage<T>(msg.Metadata, msg.Body);
+            return convertMessage<T>(msg.Metadata, msg.Body);
         }
 
         public static T? ConvertMessage<T>(QueueMessage msg)
         {
-            return ConvertMessage<T>(msg.Metadata, msg.Body);
+            return convertMessage<T>(msg.Metadata, msg.Body);
         }
 
         public static long ToUnixTime(DateTime timestamp)

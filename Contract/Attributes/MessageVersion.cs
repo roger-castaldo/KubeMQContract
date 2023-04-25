@@ -12,9 +12,9 @@ namespace KubeMQ.Contract.Attributes
         private readonly Version _version;
         public Version Version => _version;
 
-        public MessageVersion(Version version)
+        public MessageVersion(string version)
         {
-            _version=version;
+            _version=Version.Parse(version);
         }
     }
 }
