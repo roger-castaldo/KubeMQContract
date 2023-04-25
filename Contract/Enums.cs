@@ -4,10 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KubeMQ.Contract.Interfaces
+namespace KubeMQ.Contract
 {
-    public interface IMessage<T> : ITransmissionResult
+    public enum RPCType
     {
-        T? Data { get; }
+        Command=1, 
+        Query=2
     }
 }

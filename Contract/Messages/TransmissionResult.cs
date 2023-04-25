@@ -5,14 +5,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KubeMQ.Contract
+namespace KubeMQ.Contract.Messages
 {
-    internal class MessageResult : ITransmissionResult
+    internal class TransmissionResult : ITransmissionResult
     {
         public Guid? MessageID { get; init; }
 
-        public bool IsError { get; init; }
+        public bool IsError { get; init; } = false;
 
-        public string? Error { get; init; }
+        public string? Error { get; init; } = String.Empty;
     }
 }

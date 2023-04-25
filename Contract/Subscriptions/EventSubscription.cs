@@ -11,7 +11,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KubeMQ.Contract
+namespace KubeMQ.Contract.Subscriptions
 {
     internal class EventSubscription<T> : IMessageSubscription
     {
@@ -23,20 +23,21 @@ namespace KubeMQ.Contract
         private readonly Action<string> errorRecieved;
         private readonly CancellationTokenSource cancellationToken;
         private readonly long storageOffset;
-        private bool active=true;
+        private bool active = true;
 
-        public EventSubscription(KubeSubscription subscription,kubemq.kubemqClient client, ConnectionOptions options, Action<T> messageRecieved, Action<string> errorRecieved, CancellationToken cancellationToken,long storageOffset)
+        public EventSubscription(KubeSubscription subscription, kubemq.kubemqClient client, ConnectionOptions options, Action<T> messageRecieved, Action<string> errorRecieved, CancellationToken cancellationToken, long storageOffset)
         {
-            this.subscription=subscription;
-            this.client=client;
-            this.options=options;
-            this.messageRecieved=messageRecieved;
-            this.errorRecieved=errorRecieved;
-            this.storageOffset=storageOffset;
+            this.subscription = subscription;
+            this.client = client;
+            this.options = options;
+            this.messageRecieved = messageRecieved;
+            this.errorRecieved = errorRecieved;
+            this.storageOffset = storageOffset;
             this.cancellationToken = new CancellationTokenSource();
 
-            cancellationToken.Register(() => {
-                this.active=false;
+            cancellationToken.Register(() =>
+            {
+                active = false;
                 this.cancellationToken.Cancel();
             });
 
@@ -53,18 +54,18 @@ namespace KubeMQ.Contract
                 try
                 {
                     using (var call = client.SubscribeToEvents(new Subscribe()
-                        {
-                            Channel=subscription.Channel,
-                            ClientID=subscription.ClientID,
-                            Group=subscription.Group,
-                            SubscribeTypeData=eventType,
-                            EventsStoreTypeData=typeof(T).GetCustomAttributes<StoredMessage>().Select(sm=>sm.EventsStoreType).FirstOrDefault(Subscribe.Types.EventsStoreType.Undefined),
-                            EventsStoreTypeValue=storageOffset
-                        },
-                        options.GrpcMetadata,
-                        null, this.cancellationToken.Token))
                     {
-                        while (active && await call.ResponseStream.MoveNext(this.cancellationToken.Token))
+                        Channel = subscription.Channel,
+                        ClientID = subscription.ClientID,
+                        Group = subscription.Group,
+                        SubscribeTypeData = eventType,
+                        EventsStoreTypeData = typeof(T).GetCustomAttributes<StoredMessage>().Select(sm => sm.EventsStoreType).FirstOrDefault(Subscribe.Types.EventsStoreType.Undefined),
+                        EventsStoreTypeValue = storageOffset
+                    },
+                        options.GrpcMetadata,
+                        null, cancellationToken.Token))
+                    {
+                        while (active && await call.ResponseStream.MoveNext(cancellationToken.Token))
                         {
                             if (active)
                             {
@@ -96,7 +97,7 @@ namespace KubeMQ.Contract
 
         public void Stop()
         {
-            active=false;
+            active = false;
         }
     }
 }

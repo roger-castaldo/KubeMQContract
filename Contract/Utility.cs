@@ -44,19 +44,42 @@ namespace KubeMQ.Contract
 
         private static readonly Regex regMetaData = new Regex(@"^(U|C)-([^-]+)-((\d+\.)*(\d+))$", RegexOptions.Compiled);
 
-        public static T? ConvertMessage<T>(EventReceive msg)
+        private static T? ConvertMessage<T>(string? metaData, Google.Protobuf.ByteString body)
         {
-            if (msg.Metadata==null)
-                throw new ArgumentNullException(nameof(msg.Metadata));
-            var match = regMetaData.Match(msg.Metadata);
-            if (match.Success){
-                var stream = (match.Groups[1].Value=="C" ? (Stream)new GZipStream(new MemoryStream(msg.Body.ToByteArray()), System.IO.Compression.CompressionLevel.SmallestSize) : (Stream)new MemoryStream(msg.Body.ToByteArray()));
+            if (metaData==null)
+                throw new ArgumentNullException(nameof(metaData));
+            var match = regMetaData.Match(metaData);
+            if (match.Success)
+            {
+                var stream = (match.Groups[1].Value=="C" ? (Stream)new GZipStream(new MemoryStream(body.ToByteArray()), System.IO.Compression.CompressionLevel.SmallestSize) : (Stream)new MemoryStream(body.ToByteArray()));
                 if (match.Groups[2].Value!=typeof(T).Name
                     || new Version(match.Groups[3].Value)!=new Version(typeof(T).GetCustomAttributes<MessageVersion>().Select(mc => mc.Version.ToString()).FirstOrDefault("0.0.0.0")))
                     throw new InvalidCastException();
                 return System.Text.Json.JsonSerializer.Deserialize<T>(stream);
-            }else
+            }
+            else
                 throw new InvalidDataException("MetaData is not valid");
+        }
+
+        public static T? ConvertMessage<T>(EventReceive msg)
+        {
+            return ConvertMessage<T>(msg.Metadata,msg.Body);
+        }
+
+        public static T? ConvertMessage<T>(Response msg)
+        {
+            return ConvertMessage<T>(msg.Metadata, msg.Body);
+        }
+
+        public static T? ConvertMessage<T>(Request msg)
+        {
+            return ConvertMessage<T>(msg.Metadata, msg.Body);
+        }
+
+        public static long ToUnixTime(DateTime timestamp)
+        {
+            var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            return (long)(timestamp.ToUniversalTime() - epoch).TotalSeconds;
         }
     }
 }

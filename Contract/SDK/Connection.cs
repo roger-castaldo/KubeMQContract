@@ -1,6 +1,9 @@
 ﻿using Google.Protobuf;
 using Grpc.Core;
 using KubeMQ.Contract.Interfaces;
+using KubeMQ.Contract.Messages;
+using KubeMQ.Contract.SDK.Messages;
+using KubeMQ.Contract.Subscriptions;
 using System;
 
 namespace KubeMQ.Contract.SDK.Grpc
@@ -30,7 +33,7 @@ namespace KubeMQ.Contract.SDK.Grpc
         public ITransmissionResult Send<T>(T message,CancellationToken cancellationToken = new CancellationToken(), string? channel=null){
             try
             {
-                var msg = new KubeMessage<T>(message, connectionOptions, channel);
+                var msg = new KubeEvent<T>(message, connectionOptions, channel);
                 var res = client.SendEvent(new Event
                 {
                     EventID = msg.ID,
@@ -41,7 +44,7 @@ namespace KubeMQ.Contract.SDK.Grpc
                     Store = msg.Stored,
                     Tags = { msg.Tags }
                 }, connectionOptions.GrpcMetadata, null, cancellationToken);
-                return new MessageResult()
+                return new TransmissionResult()
                 {
                     MessageID=new Guid(msg.ID),
                     IsError = !string.IsNullOrEmpty(res.Error),
@@ -50,7 +53,7 @@ namespace KubeMQ.Contract.SDK.Grpc
             }
             catch (RpcException ex)
             {
-                return new MessageResult()
+                return new TransmissionResult()
                 {
                     IsError=true,
                     Error=$"Message: {ex.Message}, Status: {ex.Status}"
@@ -58,7 +61,52 @@ namespace KubeMQ.Contract.SDK.Grpc
             }
             catch (Exception ex)
             {
-                return new MessageResult()
+                return new TransmissionResult()
+                {
+                    IsError=true,
+                    Error=ex.Message
+                };
+            }
+        }
+
+        public async Task<Contract.Interfaces.IMessage<R>> SendRPC<T, R>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, int? timeout = null, RPCType? type = null)
+        {
+            try
+            {
+                var msg = new KubeRequest<T,R>(message, connectionOptions,timeout:timeout,channel:channel);
+                var res = await client.SendRequestAsync(new Request()
+                {
+                    RequestID=msg.ID,
+                    RequestTypeData = msg.CommandType,
+                    Timeout = msg.Timeout,
+                    ClientID = msg.ClientID,
+                    Channel = msg.Channel,
+                    Metadata = msg.MetaData,
+                    Body = ByteString.CopyFrom(msg.Body),
+                    Tags = { msg.Tags }
+                }, connectionOptions.GrpcMetadata, null, cancellationToken);
+                if (res==null || !res.Executed || !string.IsNullOrEmpty(res.Error))
+                    return new Message<R>()
+                    {
+                        IsError=true,
+                        Error=res.Error
+                    };
+                return new Message<R>()
+                {
+                    Data = Utility.ConvertMessage<R>(res)
+                };
+            }
+            catch (RpcException ex)
+            {
+                return new Message<R>()
+                {
+                    IsError=true,
+                    Error=$"Message: {ex.Message}, Status: {ex.Status}"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new Message<R>()
                 {
                     IsError=true,
                     Error=ex.Message
@@ -69,6 +117,25 @@ namespace KubeMQ.Contract.SDK.Grpc
         public Guid Subscribe<T>(Action<T> messageRecieved,Action<string> errorRecieved, CancellationToken cancellationToken = new CancellationToken(),string? channel=null,string group = "", long storageOffset = 0)
         {
             var sub = new EventSubscription<T>(new KubeSubscription(typeof(T),this.connectionOptions,channel:channel,group:group),this.client,this.connectionOptions,messageRecieved,errorRecieved,cancellationToken,storageOffset);
+            lock (subscriptions)
+            {
+                subscriptions.Add(sub);
+            }
+            return sub.ID;
+        }
+
+        public Guid SubscribeRPC<T, R>(
+            Func<T, R> processMessage,
+            Action<string> errorRecieved,
+            CancellationToken cancellationToken = new CancellationToken(),
+            string? channel = null,
+            string group = "",
+            RPCType? commandType = null
+        )
+        {
+            var sub = new RPCSubscription<T,R>(new KubeSubscription(typeof(T), this.connectionOptions, channel: channel, group: group), 
+                this.client, 
+                this.connectionOptions, processMessage, errorRecieved, cancellationToken, commandType:commandType);
             lock (subscriptions)
             {
                 subscriptions.Add(sub);

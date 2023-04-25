@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KubeMQ.Contract.Interfaces
+namespace KubeMQ.Contract.SDK.Interfaces
 {
-    public interface IMessage<T> : ITransmissionResult
+    internal interface IKubeEvent : IKubeMessage
     {
-        T? Data { get; }
+        bool Stored { get; }
     }
 }

@@ -13,9 +13,9 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace KubeMQ.Contract.SDK
+namespace KubeMQ.Contract.SDK.Messages
 {
-    internal class KubeMessage<T> : IKubeMessage
+    internal abstract class KubeMessage<T> : IKubeMessage
     {
         public string ID => Guid.NewGuid().ToString();
 
@@ -34,18 +34,16 @@ namespace KubeMQ.Contract.SDK
         private readonly MapField<string, string> _tags;
         public MapField<string, string> Tags => _tags;
 
-        public bool Stored => typeof(T).GetCustomAttributes<StoredMessage>().FirstOrDefault()!=null;
-
-        public KubeMessage(T message,ConnectionOptions connectionOptions,string? channel=null)
+        public KubeMessage(T message, ConnectionOptions connectionOptions, string? channel = null)
         {
             _tags = new MapField<string, string>();
-            _clientID=connectionOptions.ClientId;
-            _channel = channel??typeof(T).GetCustomAttributes<MessageChannel>().Select(mc => mc.Name).FirstOrDefault(String.Empty);
+            _clientID = connectionOptions.ClientId;
+            _channel = channel ?? typeof(T).GetCustomAttributes<MessageChannel>().Select(mc => mc.Name).FirstOrDefault(string.Empty);
             if (string.IsNullOrEmpty(_channel))
                 throw new ArgumentNullException(nameof(Channel), "message must have a channel value");
-            Utility.ConvertMessage<T>(message,connectionOptions, out _body, out _metaData);
-            if (_body.Length>connectionOptions.MaxBodySize)
-                throw new ArgumentOutOfRangeException(nameof(message),"message data exceeds maxmium message size");
+            Utility.ConvertMessage(message, connectionOptions, out _body, out _metaData);
+            if (_body.Length > connectionOptions.MaxBodySize)
+                throw new ArgumentOutOfRangeException(nameof(message), "message data exceeds maxmium message size");
         }
     }
 }
