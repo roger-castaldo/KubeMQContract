@@ -1,6 +1,7 @@
 ﻿using Grpc.Core;
 using KubeMQ.Contract.Interfaces;
 using KubeMQ.Contract.SDK.Grpc;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,6 +21,7 @@ namespace KubeMQ.Contract
         public string SSLCertificate { get; init; } = string.Empty;
         public int ReconnectInterval { get; init; } = 1000;
         public int MaxBodySize { get; init; } = 4096;
+        public ILogger? Logger { get; init; } = null;
 
         internal SslCredentials? SSLCredentials
         {

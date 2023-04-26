@@ -24,9 +24,10 @@ namespace KubeMQ.Contract.Subscriptions
         private readonly Action<string> errorRecieved;
         private readonly CancellationTokenSource cancellationToken;
         private readonly RPCType commandType;
+        private readonly ILogProvider logProvider;
         private bool active = true;
 
-        public RPCSubscription(KubeSubscription subscription, kubemq.kubemqClient client, ConnectionOptions connectionOptions, Func<T, R> processMessage, Action<string> errorRecieved, CancellationToken cancellationToken, RPCType? commandType, string? responseChannel = null)
+        public RPCSubscription(KubeSubscription subscription, kubemq.kubemqClient client, ConnectionOptions connectionOptions, Func<T, R> processMessage, Action<string> errorRecieved, CancellationToken cancellationToken,ILogProvider logProvider, RPCType? commandType, string? responseChannel = null)
         {
             this.subscription = subscription;
             this.client = client;
@@ -34,6 +35,7 @@ namespace KubeMQ.Contract.Subscriptions
             this.processMessage = processMessage;
             this.errorRecieved = errorRecieved;
             this.cancellationToken = new CancellationTokenSource();
+            this.logProvider=logProvider;
             commandType = commandType??(typeof(T).GetCustomAttributes<RPCCommandType>().Any() ? typeof(T).GetCustomAttributes<RPCCommandType>().First().Type : null);
             if (commandType==null)
                 throw new ArgumentNullException(nameof(commandType), "message must have an RPC type value");
@@ -51,6 +53,7 @@ namespace KubeMQ.Contract.Subscriptions
 
         private async Task start()
         {
+            logProvider.LogTrace("Attempting to establish RPC subscription {} to {} on channel {} for type {} returning type {}", ID, connectionOptions.Address, subscription.Channel, typeof(T).Name,typeof(R).Name);
             while (active && !cancellationToken.IsCancellationRequested)
             {
                 try
@@ -65,20 +68,23 @@ namespace KubeMQ.Contract.Subscriptions
                         connectionOptions.GrpcMetadata,
                         null, cancellationToken.Token))
                     {
+                        logProvider.LogTrace("Connection for RPC subscription {} established", ID);
                         while (active && await call.ResponseStream.MoveNext(cancellationToken.Token))
                         {
                             if (active)
                             {
                                 var req = call.ResponseStream.Current;
-                                var msg = Utility.ConvertMessage<T>(req);
-                                if (msg==null)
-                                    throw new NullReferenceException(nameof(msg));
+                                logProvider.LogTrace("Message recieved {} on RPC subscription {}", req.RequestID, ID);
+                                var msg = Utility.ConvertMessage<T>(logProvider,req);
                                 try
                                 {
+                                    if (msg==null)
+                                        throw new NullReferenceException(nameof(msg));
                                     var result = processMessage(msg);
                                     if (result==null)
                                         throw new NullReferenceException(nameof(result));
                                     var response = new KubeResponse<R>(result, this.connectionOptions, req.ReplyChannel);
+                                    logProvider.LogTrace("Response generated for {} on RPC subscription {}", req.RequestID, ID);
                                     client.SendResponse(new Response()
                                     { 
                                         CacheHit=false,
@@ -94,6 +100,7 @@ namespace KubeMQ.Contract.Subscriptions
                                     }, headers:connectionOptions.GrpcMetadata, deadline:null, cancellationToken:cancellationToken.Token);
                                 }catch(Exception e)
                                 {
+                                    logProvider.LogError("Message {} failed on subscription {}.  Message:{}", req.RequestID, ID, e.Message);
                                     client.SendResponse(new Response()
                                     {
                                         RequestID=req.RequestID,
@@ -117,11 +124,13 @@ namespace KubeMQ.Contract.Subscriptions
                     }
                     else
                     {
+                        logProvider.LogError("RPC Error recieved on RPC subscription {}.  StatusCode:{},Message:{}", ID, rpcx.StatusCode, rpcx.Message);
                         errorRecieved(rpcx.Message);
                     }
                 }
                 catch (Exception e)
                 {
+                    logProvider.LogError("Error recieved on RPC subscription {}.  Message:{}", ID, e.Message);
                     errorRecieved(e.Message);
                 }
 
@@ -131,6 +140,7 @@ namespace KubeMQ.Contract.Subscriptions
 
         public void Stop()
         {
+            logProvider.LogTrace("Stop called for RPC subscription {}", ID);
             active = false;
         }
     }

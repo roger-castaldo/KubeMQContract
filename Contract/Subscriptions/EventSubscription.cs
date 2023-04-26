@@ -4,6 +4,7 @@ using KubeMQ.Contract.Attributes;
 using KubeMQ.Contract.Interfaces;
 using KubeMQ.Contract.SDK;
 using KubeMQ.Contract.SDK.Grpc;
+using Microsoft.VisualBasic;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,8 +25,9 @@ namespace KubeMQ.Contract.Subscriptions
         private readonly CancellationTokenSource cancellationToken;
         private readonly long storageOffset;
         private bool active = true;
+        private readonly ILogProvider logProvider;
 
-        public EventSubscription(KubeSubscription subscription, kubemq.kubemqClient client, ConnectionOptions options, Action<T> messageRecieved, Action<string> errorRecieved, CancellationToken cancellationToken, long storageOffset)
+        public EventSubscription(KubeSubscription subscription, kubemq.kubemqClient client, ConnectionOptions options, Action<T> messageRecieved, Action<string> errorRecieved, CancellationToken cancellationToken, long storageOffset,ILogProvider logProvider)
         {
             this.subscription = subscription;
             this.client = client;
@@ -33,6 +35,7 @@ namespace KubeMQ.Contract.Subscriptions
             this.messageRecieved = messageRecieved;
             this.errorRecieved = errorRecieved;
             this.storageOffset = storageOffset;
+            this.logProvider=logProvider;
             this.cancellationToken = new CancellationTokenSource();
 
             cancellationToken.Register(() =>
@@ -49,6 +52,7 @@ namespace KubeMQ.Contract.Subscriptions
             var eventType = Subscribe.Types.SubscribeType.Events;
             if (typeof(T).GetCustomAttributes<StoredMessage>().Any())
                 eventType = Subscribe.Types.SubscribeType.EventsStore;
+            logProvider.LogTrace("Attempting to establish subscription {} to {} on channel {} for type {}",ID, options.Address, subscription.Channel, typeof(T).Name);
             while (active && !cancellationToken.IsCancellationRequested)
             {
                 try
@@ -65,17 +69,21 @@ namespace KubeMQ.Contract.Subscriptions
                         options.GrpcMetadata,
                         null, cancellationToken.Token))
                     {
+                        logProvider.LogTrace("Connection for subscription {} established",ID);
                         while (active && await call.ResponseStream.MoveNext(cancellationToken.Token))
                         {
                             if (active)
                             {
+                                var evnt = call.ResponseStream.Current;
                                 try
                                 {
-                                    var msg = Utility.ConvertMessage<T>(call.ResponseStream.Current);
+                                    logProvider.LogTrace("Message recieved {} on subscription {}", evnt.EventID, ID);
+                                    var msg = Utility.ConvertMessage<T>(logProvider,evnt);
                                     messageRecieved(msg);
                                 }
                                 catch (Exception e)
                                 {
+                                    logProvider.LogError("Message {} failed on subscription {}.  Message:{}", evnt.EventID, ID,e.Message);
                                     errorRecieved(e.Message);
                                 }
                             }
@@ -90,11 +98,13 @@ namespace KubeMQ.Contract.Subscriptions
                     }
                     else
                     {
+                        logProvider.LogError("RPC Error recieved on subscription {}.  StatusCode:{},Message:{}", ID, rpcx.StatusCode, rpcx.Message);
                         errorRecieved(rpcx.Message);
                     }
                 }
                 catch (Exception e)
                 {
+                    logProvider.LogError("Error recieved on subscription {}.  Message:{}", ID, e.Message);
                     errorRecieved(e.Message);
                 }
 
@@ -104,6 +114,7 @@ namespace KubeMQ.Contract.Subscriptions
 
         public void Stop()
         {
+            logProvider.LogTrace("Stop called for subscription {}", ID);
             active = false;
         }
     }

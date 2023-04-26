@@ -14,11 +14,12 @@ namespace KubeMQ.Contract
         private static IEnumerable<object> converters = Array.Empty<object>();
         private static ReaderWriterLockSlim enumLock = new ReaderWriterLockSlim();
 
-        public static void RegisterAssembly(Assembly assembly)
+        public static void RegisterAssembly(ILogProvider logProvider,Assembly assembly)
         {
             enumLock.EnterWriteLock();
             if (!loadedAssemblies.Contains(assembly.FullName))
             {
+                logProvider.LogTrace("Scanning Assembly {} for IMessageConverter implementations", assembly.FullName);
                 converters = converters.Concat(assembly.GetTypes()
                     .Where(t => !t.IsInterface && !t.IsAbstract && t.GetInterfaces().Any(iface=>iface.IsGenericType && iface.GetGenericTypeDefinition()==typeof(IMessageConverter<,>)))
                     .Select(t=>Activator.CreateInstance(t))
@@ -32,8 +33,9 @@ namespace KubeMQ.Contract
             return t.GetInterfaces().FirstOrDefault(iface => iface.IsGenericType && iface.GetGenericTypeDefinition()==typeof(IMessageConverter<,>)).GetGenericArguments();
         }
 
-        public static T? ConvertMessage<T>(string metaData, Google.Protobuf.ByteString body)
+        public static T? ConvertMessage<T>(ILogProvider logProvider, string metaData, Google.Protobuf.ByteString body)
         {
+            logProvider.LogTrace("Attempting to convert Message {} to {}", metaData, typeof(T).Name);
             var found = false;
             var result = default(T?);
             enumLock.EnterReadLock();
@@ -43,19 +45,20 @@ namespace KubeMQ.Contract
                 && extractGenericArguements(c.GetType())[1]==typeof(T));
                 if (converter != null)
                 {
+                    logProvider.LogTrace("Found direct converter {} to convert {} to {}", converter.GetType().Name, metaData, typeof(T).Name);
                     found=true;
-                    result = (T?)executeConverter(converter, Utility.ConvertMessage(extractGenericArguements(converter.GetType())[0], metaData, body), typeof(T));
+                    result = (T?)executeConverter(converter, Utility.ConvertMessage(extractGenericArguements(converter.GetType())[0],logProvider, metaData, body), typeof(T));
                 }
                 else
                 {
                     converter = converters.FirstOrDefault(c => Utility.IsMessateTypeMatch(metaData, extractGenericArguements(c.GetType())[0]));
                     if (converter!=null)
                     {
-                        var baseObject = Utility.ConvertMessage(extractGenericArguements(converter.GetType())[0], metaData, body);
+                        logProvider.LogTrace("Attempting to convert {} to {} through converters for {}", metaData, typeof(T).Name, extractGenericArguements(converter.GetType())[0].Name);
+                        var baseObject = Utility.ConvertMessage(extractGenericArguements(converter.GetType())[0],logProvider, metaData, body);
                         List<Type> testedTypes = new List<Type>() { baseObject.GetType() };
-                        result = (T?)tryConverting(ref testedTypes, baseObject, typeof(T), out found);
+                        result = (T?)tryConverting(logProvider,ref testedTypes, baseObject, typeof(T), out found);
                     }
-
                 }
             }
             catch(Exception)
@@ -66,7 +69,7 @@ namespace KubeMQ.Contract
             return result;
         }
 
-        private static object? tryConverting(ref List<Type> testedTypes, object? source,Type destination, out bool found)
+        private static object? tryConverting(ILogProvider logProvider,ref List<Type> testedTypes, object? source,Type destination, out bool found)
         {
             found=false;
             if (source==null)
@@ -75,6 +78,7 @@ namespace KubeMQ.Contract
             && extractGenericArguements(c.GetType())[1]==destination);
             if (converter!=null)
             {
+                logProvider.LogTrace("Converting {} to destination {} through exact match", source.GetType().Name, destination.Name);
                 found=true;
                 return executeConverter(converter, source, destination);
             }
@@ -85,7 +89,8 @@ namespace KubeMQ.Contract
                     if (!testedTypes.Contains(extractGenericArguements(conv.GetType())[1]))
                     {
                         testedTypes.Add(extractGenericArguements(conv.GetType())[1]);
-                        var result = tryConverting(ref testedTypes, executeConverter(conv,source, extractGenericArguements(conv.GetType())[1]), destination, out found);
+                        logProvider.LogTrace("Attempting to convert {} to {} through {}", source.GetType().Name, destination.Name, extractGenericArguements(conv.GetType())[1].Name);
+                        var result = tryConverting(logProvider,ref testedTypes, executeConverter(conv,source, extractGenericArguements(conv.GetType())[1]), destination, out found);
                         if (found)
                             return result;
                     }

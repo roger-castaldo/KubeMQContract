@@ -8,6 +8,7 @@ namespace KubeMQ.Contract.Interfaces
 {
     public interface IMessageQueue<T>
     {
+        Guid ID { get; }
         bool HasMore { get; }
         T? Peek();
         T? Pop();

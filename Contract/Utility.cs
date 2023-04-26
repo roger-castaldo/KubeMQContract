@@ -1,5 +1,6 @@
 ﻿using Grpc.Core;
 using KubeMQ.Contract.Attributes;
+using KubeMQ.Contract.Interfaces;
 using KubeMQ.Contract.SDK.Grpc;
 using System;
 using System.Collections.Generic;
@@ -67,13 +68,13 @@ namespace KubeMQ.Contract
             return false;
         }
 
-        public static object? ConvertMessage(Type t, string metaData, Google.Protobuf.ByteString body)
+        public static object? ConvertMessage(Type t,ILogProvider logProvider, string metaData, Google.Protobuf.ByteString body)
         {
             return typeof(Utility).GetMethod("convertMessage",BindingFlags.Static|BindingFlags.NonPublic)
-                .MakeGenericMethod(new Type[] { t }).Invoke(null,new object[] {metaData, body});
+                .MakeGenericMethod(new Type[] { t }).Invoke(null,new object[] { logProvider,metaData, body});
         }
 
-        private static T? convertMessage<T>(string? metaData, Google.Protobuf.ByteString body)
+        private static T? convertMessage<T>(ILogProvider logProvider,string? metaData, Google.Protobuf.ByteString body)
         {
             if (metaData==null)
                 throw new ArgumentNullException(nameof(metaData));
@@ -83,26 +84,26 @@ namespace KubeMQ.Contract
                 var stream = (isCompressed ? (Stream)new GZipStream(new MemoryStream(body.ToByteArray()), System.IO.Compression.CompressionMode.Decompress) : (Stream)new MemoryStream(body.ToByteArray()));
                 return System.Text.Json.JsonSerializer.Deserialize<T>(stream);
             }else
-                return ConverterFactory.ConvertMessage<T>(metaData, body);
+                return ConverterFactory.ConvertMessage<T>(logProvider,metaData, body);
         }
-        public static T? ConvertMessage<T>(EventReceive msg)
+        public static T? ConvertMessage<T>(ILogProvider logProvider, EventReceive msg)
         {
-            return convertMessage<T>(msg.Metadata,msg.Body);
-        }
-
-        public static T? ConvertMessage<T>(Response msg)
-        {
-            return convertMessage<T>(msg.Metadata, msg.Body);
+            return convertMessage<T>(logProvider,msg.Metadata,msg.Body);
         }
 
-        public static T? ConvertMessage<T>(Request msg)
+        public static T? ConvertMessage<T>(ILogProvider logProvider, Response msg)
         {
-            return convertMessage<T>(msg.Metadata, msg.Body);
+            return convertMessage<T>(logProvider, msg.Metadata, msg.Body);
         }
 
-        public static T? ConvertMessage<T>(QueueMessage msg)
+        public static T? ConvertMessage<T>(ILogProvider logProvider, Request msg)
         {
-            return convertMessage<T>(msg.Metadata, msg.Body);
+            return convertMessage<T>(logProvider, msg.Metadata, msg.Body);
+        }
+
+        public static T? ConvertMessage<T>(ILogProvider logProvider, QueueMessage msg)
+        {
+            return convertMessage<T>(logProvider, msg.Metadata, msg.Body);
         }
 
         public static long ToUnixTime(DateTime timestamp)
