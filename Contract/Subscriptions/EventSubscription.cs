@@ -20,14 +20,14 @@ namespace KubeMQ.Contract.Subscriptions
         private readonly KubeSubscription subscription;
         private readonly kubemq.kubemqClient client;
         private readonly ConnectionOptions options;
-        private readonly Action<T> messageRecieved;
+        private readonly Action<IMessage<T>> messageRecieved;
         private readonly Action<string> errorRecieved;
         private readonly CancellationTokenSource cancellationToken;
         private readonly long storageOffset;
         private bool active = true;
         private readonly ILogProvider logProvider;
 
-        public EventSubscription(KubeSubscription subscription, kubemq.kubemqClient client, ConnectionOptions options, Action<T> messageRecieved, Action<string> errorRecieved, CancellationToken cancellationToken, long storageOffset,ILogProvider logProvider)
+        public EventSubscription(KubeSubscription subscription, kubemq.kubemqClient client, ConnectionOptions options, Action<IMessage<T>> messageRecieved, Action<string> errorRecieved, CancellationToken cancellationToken, long storageOffset,ILogProvider logProvider)
         {
             this.subscription = subscription;
             this.client = client;

@@ -25,7 +25,7 @@ namespace KubeMQ.Contract.Subscriptions
 
         public Guid ID => Guid.NewGuid();
 
-        public MessageQueue(ConnectionOptions connectionOptions, kubemq.kubemqClient client,ILogProvider logProvider, string? channel = null)
+        public MessageQueue(ConnectionOptions connectionOptions, kubemq.kubemqClient client,ILogProvider logProvider, string? channel)
         {
             this.connectionOptions=connectionOptions;
             this.client=client;
@@ -57,7 +57,7 @@ namespace KubeMQ.Contract.Subscriptions
             }
         }
 
-        public T? Peek()
+        public IMessage<T>? Peek()
         {
             logProvider.LogTrace("Peeking Queue {}", ID);
             var res = client.ReceiveQueueMessages(new ReceiveQueueMessagesRequest()
@@ -72,18 +72,18 @@ namespace KubeMQ.Contract.Subscriptions
             logProvider.LogTrace("Peek results for Queue {} (IsError:{},Error:{},MessagesRecieved:{}",ID,res.IsError,res.Error,res.MessagesReceived);
             if (res!=null && !res.IsError && string.IsNullOrEmpty(res.Error)&&res.MessagesReceived>0)
                 return Utility.ConvertMessage<T>(logProvider,res.Messages.First());
-            return default(T?);
+            return default(IMessage<T>?);
         }
 
-        public T? Pop()
+        public IMessage<T>? Pop()
         {
             var data = Pop(1);
             if (data.Any())
                 return data.First();
-            return default(T?);
+            return default(IMessage<T>?);
         }
 
-        public IEnumerable<T> Pop(int count)
+        public IEnumerable<IMessage<T>> Pop(int count)
         {
             logProvider.LogTrace("Popping Queue {}, count {}", ID,count);
             var res = client.ReceiveQueueMessages(new ReceiveQueueMessagesRequest()
@@ -98,7 +98,7 @@ namespace KubeMQ.Contract.Subscriptions
             logProvider.LogTrace("Pop results for Queue {} (IsError:{},Error:{},MessagesRecieved:{}", ID, res.IsError, res.Error, res.MessagesReceived);
             if (res!=null && !res.IsError && string.IsNullOrEmpty(res.Error)&&res.MessagesReceived>0)
                 return res.Messages.Select(msg => Utility.ConvertMessage<T>(logProvider,msg));
-            return Array.Empty<T>();
+            return Array.Empty<IMessage<T>>();
         }
 
         public void Dispose()

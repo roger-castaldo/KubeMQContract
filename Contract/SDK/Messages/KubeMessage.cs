@@ -34,9 +34,14 @@ namespace KubeMQ.Contract.SDK.Messages
         private readonly MapField<string, string> _tags;
         public MapField<string, string> Tags => _tags;
 
-        public KubeMessage(T message, ConnectionOptions connectionOptions, string? channel = null)
+        public KubeMessage(T message, ConnectionOptions connectionOptions, string? channel, Dictionary<string, string>? tagCollection)
         {
             _tags = new MapField<string, string>();
+            if (tagCollection!=null)
+            {
+                foreach (var tag in tagCollection)
+                    _tags.Add(tag.Key, tag.Value);
+            }
             _clientID = connectionOptions.ClientId;
             _channel = channel ?? typeof(T).GetCustomAttributes<MessageChannel>().Select(mc => mc.Name).FirstOrDefault(string.Empty);
             if (string.IsNullOrEmpty(_channel))

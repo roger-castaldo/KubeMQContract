@@ -55,8 +55,8 @@ namespace KubeMQ.Contract.SDK.Messages
             }
         }
 
-        public KubeEnqueue(T message, ConnectionOptions connectionOptions, string? channel = null,int? delaySeconds=null, int? expirationSeconds = null, int? maxCount = null, string? maxCountChannel = null) 
-            : base(message, connectionOptions, channel)
+        public KubeEnqueue(T message, ConnectionOptions connectionOptions, string? channel,int? delaySeconds,int? expirationSeconds, int? maxCount, string? maxCountChannel,Dictionary<string, string>? tagCollection) 
+            : base(message, connectionOptions, channel, tagCollection)
         {
             var policy = typeof(T).GetCustomAttributes<MessageQueuePolicy>().FirstOrDefault();
             this.delaySeconds = delaySeconds;

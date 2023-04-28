@@ -17,12 +17,13 @@ namespace KubeMQ.Contract.SDK.Messages
         private readonly int? expirationSeconds;
         private readonly int? maxCount;
         private readonly string? maxCountChannel;
+        private readonly Dictionary<string, string>? tagCollection;
         public Guid ID => Guid.NewGuid();
 
         private readonly IEnumerable<T> items;
         public IEnumerable<QueueMessage> Messages => items.Select(item =>
         {
-            var msg = new KubeEnqueue<T>(item,connectionOptions,channel:channel,delaySeconds:delaySeconds,expirationSeconds:expirationSeconds,maxCount:maxCount,maxCountChannel:maxCountChannel);
+            var msg = new KubeEnqueue<T>(item,connectionOptions,channel,delaySeconds,expirationSeconds,maxCount,maxCountChannel,tagCollection);
             return new QueueMessage()
             {
                 MessageID= msg.ID,
@@ -35,7 +36,7 @@ namespace KubeMQ.Contract.SDK.Messages
             };
         });
 
-        public KubeBatchEnqueue(IEnumerable<T> items,ConnectionOptions connectionOptions, string? channel = null, int? delaySeconds = null, int? expirationSeconds = null, int? maxCount = null, string? maxCountChannel = null)
+        public KubeBatchEnqueue(IEnumerable<T> items,ConnectionOptions connectionOptions, string? channel, int? delaySeconds, int? expirationSeconds, int? maxCount, string? maxCountChannel, Dictionary<string, string>? tagCollection)
         {
             this.items=items;
             this.connectionOptions = connectionOptions;
@@ -44,6 +45,7 @@ namespace KubeMQ.Contract.SDK.Messages
             this.expirationSeconds = expirationSeconds;
             this.maxCount = maxCount;
             this.maxCountChannel = maxCountChannel;
+            this.tagCollection=tagCollection;
         }
     }
 }

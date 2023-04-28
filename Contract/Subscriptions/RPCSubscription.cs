@@ -20,14 +20,14 @@ namespace KubeMQ.Contract.Subscriptions
         private readonly KubeSubscription subscription;
         private readonly kubemq.kubemqClient client;
         private readonly ConnectionOptions connectionOptions;
-        private readonly Func<T, R> processMessage;
+        private readonly Func<IMessage<T>, TaggedResponse<R>> processMessage;
         private readonly Action<string> errorRecieved;
         private readonly CancellationTokenSource cancellationToken;
         private readonly RPCType commandType;
         private readonly ILogProvider logProvider;
         private bool active = true;
 
-        public RPCSubscription(KubeSubscription subscription, kubemq.kubemqClient client, ConnectionOptions connectionOptions, Func<T, R> processMessage, Action<string> errorRecieved, CancellationToken cancellationToken,ILogProvider logProvider, RPCType? commandType, string? responseChannel = null)
+        public RPCSubscription(KubeSubscription subscription, kubemq.kubemqClient client, ConnectionOptions connectionOptions, Func<IMessage<T>, TaggedResponse<R>> processMessage, Action<string> errorRecieved, CancellationToken cancellationToken,ILogProvider logProvider, RPCType? commandType, string? responseChannel = null)
         {
             this.subscription = subscription;
             this.client = client;
@@ -83,7 +83,7 @@ namespace KubeMQ.Contract.Subscriptions
                                     var result = processMessage(msg);
                                     if (result==null)
                                         throw new NullReferenceException(nameof(result));
-                                    var response = new KubeResponse<R>(result, this.connectionOptions, req.ReplyChannel);
+                                    var response = new KubeResponse<R>(result.Response, this.connectionOptions, req.ReplyChannel,result.Tags);
                                     logProvider.LogTrace("Response generated for {} on RPC subscription {}", req.RequestID, ID);
                                     client.SendResponse(new Response()
                                     { 

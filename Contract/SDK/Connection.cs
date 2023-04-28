@@ -42,12 +42,12 @@ namespace KubeMQ.Contract.SDK.Grpc
             return new KubeMQ.Contract.SDK.PingResult(rec);
         }
 
-        public async Task<ITransmissionResult> Send<T>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null)
+        public async Task<ITransmissionResult> Send<T>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, Dictionary<string, string>? tagCollection = null)
         {
             registerAssembly(Assembly.GetCallingAssembly());
             try
             {
-                var msg = new KubeEvent<T>(message, connectionOptions, channel);
+                var msg = new KubeEvent<T>(message, connectionOptions, channel,tagCollection);
                 log(LogLevel.Information, "Sending Message {} of type {}",msg.ID, typeof(T).Name);
                 var res = await client.SendEventAsync(new Event
                 {
@@ -87,12 +87,12 @@ namespace KubeMQ.Contract.SDK.Grpc
             }
         }
 
-        public async Task<Contract.Interfaces.IMessage<R>> SendRPC<T, R>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, int? timeout = null, RPCType? type = null)
+        public async Task<Contract.Interfaces.IResultMessage<R>> SendRPC<T, R>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, int? timeout = null, RPCType? type = null, Dictionary<string, string>? tagCollection = null)
         {
             registerAssembly(Assembly.GetCallingAssembly());
             try
             {
-                var msg = new KubeRequest<T, R>(message, connectionOptions, timeout: timeout, channel: channel);
+                var msg = new KubeRequest<T, R>(message, connectionOptions, timeout, channel,type,tagCollection);
                 log(LogLevel.Information, "Sending RPC Message {} of type {}", msg.ID, typeof(T).Name);
                 var res = await client.SendRequestAsync(new Request()
                 {
@@ -107,20 +107,17 @@ namespace KubeMQ.Contract.SDK.Grpc
                 }, connectionOptions.GrpcMetadata, null, cancellationToken);
                 log(LogLevel.Information, "Transmission Result for RPC {} (IsError:{},Error:{})", msg.ID, !string.IsNullOrEmpty(res.Error), res.Error);
                 if (res==null || !res.Executed || !string.IsNullOrEmpty(res.Error))
-                    return new Message<R>()
+                    return new ResultMessage<R>()
                     {
                         IsError=true,
                         Error=res.Error
                     };
-                return new Message<R>()
-                {
-                    Data = Utility.ConvertMessage<R>(this,res)
-                };
+                return Utility.ConvertMessage<R>(this,res);
             }
             catch (RpcException ex)
             {
                 log(LogLevel.Error, "RPC error occured on SendRPC in send Message:{}, Status: {}", ex.Message, ex.Status);
-                return new Message<R>()
+                return new ResultMessage<R>()
                 {
                     IsError=true,
                     Error=$"Message: {ex.Message}, Status: {ex.Status}"
@@ -129,7 +126,7 @@ namespace KubeMQ.Contract.SDK.Grpc
             catch (Exception ex)
             {
                 log(LogLevel.Error, "Exception occured in SendRPC Message:{}, Status: {}", ex.Message);
-                return new Message<R>()
+                return new ResultMessage<R>()
                 {
                     IsError=true,
                     Error=ex.Message
@@ -137,12 +134,12 @@ namespace KubeMQ.Contract.SDK.Grpc
             }
         }
 
-        public async Task<ITransmissionResult> EnqueueMessage<T>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, int? expirationSeconds = null, int? delaySeconds = null, int? maxQueueSize = null, string? maxQueueChannel = null)
+        public async Task<ITransmissionResult> EnqueueMessage<T>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, int? expirationSeconds = null, int? delaySeconds = null, int? maxQueueSize = null, string? maxQueueChannel = null, Dictionary<string, string>? tagCollection = null)
         {
             registerAssembly(Assembly.GetCallingAssembly());
             try
             {
-                var msg = new KubeEnqueue<T>(message, connectionOptions, channel: channel, delaySeconds: delaySeconds, expirationSeconds: expirationSeconds, maxCount: maxQueueSize, maxCountChannel: maxQueueChannel);
+                var msg = new KubeEnqueue<T>(message, connectionOptions, channel, delaySeconds, expirationSeconds, maxQueueSize, maxQueueChannel,tagCollection);
                 log(LogLevel.Information, "Sending EnqueueMessage {} of type {}", msg.ID, typeof(T).Name);
                 var res = await client.SendQueueMessageAsync(new QueueMessage()
                 {
@@ -183,12 +180,12 @@ namespace KubeMQ.Contract.SDK.Grpc
             }
         }
 
-        public async Task<IBatchTransmissionResult> EnqueueMessages<T>(IEnumerable<T> messages, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, int? expirationSeconds = null, int? delaySeconds = null, int? maxQueueSize = null, string? maxQueueChannel = null)
+        public async Task<IBatchTransmissionResult> EnqueueMessages<T>(IEnumerable<T> messages, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, int? expirationSeconds = null, int? delaySeconds = null, int? maxQueueSize = null, string? maxQueueChannel = null, Dictionary<string, string>? tagCollection = null)
         {
             registerAssembly(Assembly.GetCallingAssembly());
             try
             {
-                var msg = new KubeBatchEnqueue<T>(messages, connectionOptions, channel: channel, delaySeconds: delaySeconds, expirationSeconds: expirationSeconds, maxCount: maxQueueSize, maxCountChannel: maxQueueChannel);
+                var msg = new KubeBatchEnqueue<T>(messages, connectionOptions, channel, delaySeconds, expirationSeconds, maxQueueSize, maxQueueChannel,tagCollection);
                 log(LogLevel.Information, "Sending EnqueueMessages {} of type {}", msg.ID, typeof(T).Name);
                 var res = await client.SendQueueMessagesBatchAsync(
                     new QueueMessagesBatchRequest()
@@ -231,7 +228,7 @@ namespace KubeMQ.Contract.SDK.Grpc
             }
         }
 
-        public Guid Subscribe<T>(Action<T> messageRecieved, Action<string> errorRecieved, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, string group = "", long storageOffset = 0)
+        public Guid Subscribe<T>(Action<Contract.Interfaces.IMessage<T>> messageRecieved, Action<string> errorRecieved, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, string group = "", long storageOffset = 0)
         {
             registerAssembly(Assembly.GetCallingAssembly());
             var sub = new EventSubscription<T>(new KubeSubscription(typeof(T), this.connectionOptions, channel: channel, group: group), this.client, this.connectionOptions, messageRecieved, errorRecieved, cancellationToken, storageOffset,this);
@@ -244,7 +241,7 @@ namespace KubeMQ.Contract.SDK.Grpc
         }
 
         public Guid SubscribeRPC<T, R>(
-            Func<T, R> processMessage,
+            Func<Contract.Interfaces.IMessage<T>, TaggedResponse<R>> processMessage,
             Action<string> errorRecieved,
             CancellationToken cancellationToken = new CancellationToken(),
             string? channel = null,
@@ -269,7 +266,7 @@ namespace KubeMQ.Contract.SDK.Grpc
         {
             registerAssembly(Assembly.GetCallingAssembly());
             log(LogLevel.Information, "Requesting SubscribeToQueue of type {}", typeof(T).Name);
-            return new MessageQueue<T>(connectionOptions, client,this, channel: channel);
+            return new MessageQueue<T>(connectionOptions, client,this, channel);
         }
 
         public void Unsubscribe(Guid id)

@@ -13,7 +13,7 @@ namespace KubeMQ.Contract.SDK.Messages
     {
         public bool Stored => typeof(T).GetCustomAttributes<StoredMessage>().FirstOrDefault() != null;
 
-        public KubeEvent(T message, ConnectionOptions connectionOptions, string? channel = null)
-            :base(message,connectionOptions,channel) { }
+        public KubeEvent(T message, ConnectionOptions connectionOptions, string? channel, Dictionary<string, string>? tagCollection)
+            :base(message,connectionOptions,channel,tagCollection) { }
     }
 }

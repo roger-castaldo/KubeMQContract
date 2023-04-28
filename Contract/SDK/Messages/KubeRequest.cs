@@ -16,8 +16,8 @@ namespace KubeMQ.Contract.SDK.Messages
         public int Timeout => timeout;
         private readonly RPCType commandType;
         public RequestType CommandType => (RequestType)(int)commandType;
-        public KubeRequest(T message, ConnectionOptions connectionOptions, int? timeout = null, string? channel = null, RPCType? type = null)
-            : base(message, connectionOptions, channel) {
+        public KubeRequest(T message, ConnectionOptions connectionOptions, int? timeout, string? channel, RPCType? type, Dictionary<string, string>? tagCollection)
+            : base(message, connectionOptions, channel, tagCollection) {
             type = type??(typeof(T).GetCustomAttributes<RPCCommandType>().Any() ? typeof(T).GetCustomAttributes<RPCCommandType>().First().Type : null);
             if (type==null)
                 throw new ArgumentNullException(nameof(type), "message must have an RPC type value");

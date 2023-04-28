@@ -10,8 +10,8 @@ namespace KubeMQ.Contract.Interfaces
     {
         Guid ID { get; }
         bool HasMore { get; }
-        T? Peek();
-        T? Pop();
-        IEnumerable<T> Pop(int count);
+        IMessage<T>? Peek();
+        IMessage<T>? Pop();
+        IEnumerable<IMessage<T>> Pop(int count);
     }
 }

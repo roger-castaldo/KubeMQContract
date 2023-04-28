@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace KubeMQ.Contract.Interfaces
 {
-    public interface IMessage<T> : ITransmittedMessage
+    public interface IResultMessage<T> : ITransmittedMessage
     {
-        T Data { get; }
+        T? Response { get; }
     }
 }
