@@ -23,10 +23,7 @@ namespace KubeMQ.Contract
 
         public static void ConvertMessage<T>(T message,ConnectionOptions connectionOptions,out byte[] body,out string metaData)
         {
-            body = System.Text.UTF8Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize<T>(message, new System.Text.Json.JsonSerializerOptions()
-            {
-                WriteIndented=false
-            }));
+            body = EncoderFactory.Encode<T>(message);
             if (body.Length>connectionOptions.MaxBodySize)
             {
                 using (var ms = new MemoryStream())
@@ -82,8 +79,9 @@ namespace KubeMQ.Contract
             if (IsMessageTypeMatch(metaData, typeof(T), out isCompressed))
             {
                 var stream = (isCompressed ? (Stream)new GZipStream(new MemoryStream(body.ToByteArray()), System.IO.Compression.CompressionMode.Decompress) : (Stream)new MemoryStream(body.ToByteArray()));
-                return System.Text.Json.JsonSerializer.Deserialize<T>(stream);
-            }else
+                return EncoderFactory.Decode<T>(stream);
+            }
+            else
                 return ConverterFactory.ConvertMessage<T>(logProvider,metaData, body);
         }
         public static T? ConvertMessage<T>(ILogProvider logProvider, EventReceive msg)

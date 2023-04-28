@@ -21,8 +21,8 @@ namespace KubeMQ.Contract
             {
                 logProvider.LogTrace("Scanning Assembly {} for IMessageConverter implementations", assembly.FullName);
                 converters = converters.Concat(assembly.GetTypes()
-                    .Where(t => !t.IsInterface && !t.IsAbstract && t.GetInterfaces().Any(iface=>iface.IsGenericType && iface.GetGenericTypeDefinition()==typeof(IMessageConverter<,>)))
-                    .Select(t=>Activator.CreateInstance(t))
+                                                       .Where(t => !t.IsInterface && !t.IsAbstract && t.GetInterfaces().Any(iface => iface.IsGenericType && iface.GetGenericTypeDefinition()==typeof(IMessageConverter<,>)))
+                                                       .Select(t=>Activator.CreateInstance(t))
                 );
             }
             enumLock.ExitWriteLock();
