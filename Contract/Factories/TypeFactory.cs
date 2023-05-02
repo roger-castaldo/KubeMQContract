@@ -9,6 +9,7 @@ using KubeMQ.Contract.SDK.Interfaces;
 using KubeMQ.Contract.SDK.Messages;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
@@ -24,6 +25,8 @@ namespace KubeMQ.Contract.Factories
     {
         private static readonly Regex regMetaData = new Regex(@"^(U|C)-(.+)-((\d+\.)*(\d+))$", RegexOptions.Compiled);
 
+        private readonly IGlobalMessageEncoder? globalMessageEncoder;
+        private readonly IGlobalMessageEncryptor? globalMessageEncryptor;
         private readonly IMessageEncoder<T> messageEncoder;
         private readonly IMessageEncryptor<T> messageEncryptor;
         private readonly IEnumerable<IConversionPath<T>> converters;
@@ -35,8 +38,10 @@ namespace KubeMQ.Contract.Factories
         private readonly RPCType? rpcType = (typeof(T).GetCustomAttributes<RPCCommandType>().Any() ? typeof(T).GetCustomAttributes<RPCCommandType>().First().Type : null);
         private readonly int requestTimeout = typeof(T).GetCustomAttributes<MessageResponseTimeout>().Select(mrt => mrt.Value).FirstOrDefault(5000);
 
-        public TypeFactory()
+        public TypeFactory(IGlobalMessageEncoder? globalMessageEncoder, IGlobalMessageEncryptor? globalMessageEncryptor)
         {
+            this.globalMessageEncoder = globalMessageEncoder;
+            this.globalMessageEncryptor = globalMessageEncryptor;
             var types = AssemblyLoadContext.All
                 .SelectMany(context => context.Assemblies)
                 .SelectMany(assembly => assembly.GetTypes())
@@ -47,10 +52,10 @@ namespace KubeMQ.Contract.Factories
             messageEncryptor = (IMessageEncryptor<T>)Activator.CreateInstance(types
                 .FirstOrDefault(type => type.GetInterfaces().Any(iface => iface==typeof(IMessageEncryptor<T>)),typeof(NonEncryptor<T>))
                 )!;
-            converters = traceConverters(typeof(T),types,Array.Empty<object>(), Array.Empty<IConversionPath<T>>());
+            converters = traceConverters(typeof(T), globalMessageEncoder, globalMessageEncryptor, types,Array.Empty<object>(), Array.Empty<IConversionPath<T>>());
         }
 
-        private static IEnumerable<IConversionPath<T>> traceConverters(Type destinationType,IEnumerable<Type> types,IEnumerable<object> curPath, IEnumerable<IConversionPath<T>> converters)
+        private static IEnumerable<IConversionPath<T>> traceConverters(Type destinationType, IGlobalMessageEncoder? globalMessageEncoder, IGlobalMessageEncryptor? globalMessageEncryptor, IEnumerable<Type> types,IEnumerable<object> curPath, IEnumerable<IConversionPath<T>> converters)
         {
             var subPaths = types.Where(t => t.GetInterfaces().Any(iface => iface.IsGenericType &&
                 iface.GetGenericTypeDefinition()==typeof(IMessageConverter<,>)
@@ -63,11 +68,11 @@ namespace KubeMQ.Contract.Factories
                 subPaths.Select(path => (IConversionPath<T>)Activator.CreateInstance(typeof(ConversionPath<,>).MakeGenericType(new Type[] {
                     extractGenericArguements(path.First().GetType())[0],
                     typeof(T)
-                }), path,types)!)
+                }), path,types,globalMessageEncoder,globalMessageEncryptor)!)
             );
 
             foreach (var path in subPaths)
-                results = traceConverters(extractGenericArguements(path.First().GetType())[0], types, path, results);
+                results = traceConverters(extractGenericArguements(path.First().GetType())[0], globalMessageEncoder, globalMessageEncryptor, types, path, results);
 
             return results;
         }
@@ -142,7 +147,14 @@ namespace KubeMQ.Contract.Factories
 
         T? IConversionPath<T>.ConvertMessage(ILogProvider logProvider, Stream stream, IMessageHeader messageHeader)
         {
-            return messageEncoder.Decode((messageEncryptor==null ? stream : messageEncryptor.Decrypt(stream, messageHeader)));
+            if (globalMessageEncryptor!=null && messageEncryptor is NonEncryptor<T>)
+                stream=globalMessageEncryptor.Decrypt(stream,messageHeader);
+            else
+                stream = messageEncryptor.Decrypt(stream, messageHeader);
+            if (globalMessageEncoder!=null && messageEncoder is JsonEncoder<T>)
+                return globalMessageEncoder.Decode<T>(stream);
+            else 
+                return messageEncoder.Decode(stream);
         }
 
         private IKubeMessage produceBaseMessage(T message, ConnectionOptions connectionOptions, string? channel, Dictionary<string, string>? tagCollection)
@@ -151,13 +163,15 @@ namespace KubeMQ.Contract.Factories
             if (string.IsNullOrEmpty(channel))
                 throw new ArgumentNullException(nameof(Channel), "message must have a channel value");
 
-            var tags = new MapField<string, string>();
-            if (tagCollection!=null)
-            {
-                foreach (var tag in tagCollection)
-                    tags.Add(tag.Key, tag.Value);
-            }
             var body = messageEncoder.Encode(message);
+
+            Dictionary<string, string> messageHeader = null;
+
+            if (globalMessageEncryptor!=null && messageEncryptor is NonEncryptor<T>)
+                body = globalMessageEncryptor.Encrypt(body, out messageHeader);
+            else
+                body = messageEncryptor.Encrypt(body, out messageHeader);
+
             var metaData = string.Empty;
             if (body.Length>connectionOptions.MaxBodySize)
             {
@@ -173,7 +187,19 @@ namespace KubeMQ.Contract.Factories
             else
                 metaData="U";
             metaData+=$"-{messageName}-{messageVersion}";
-            
+
+            var tags = new MapField<string, string>();
+            if (messageHeader!=null)
+            {
+                foreach (var tag in messageHeader)
+                    tags.Add(tag.Key, tag.Value);
+            }
+            if (tagCollection!=null)
+            {
+                foreach (var tag in tagCollection.Where(t=>!tags.ContainsKey(t.Key)))
+                    tags.Add(tag.Key, tag.Value);
+            }
+
             if (body.Length > connectionOptions.MaxBodySize)
                 throw new ArgumentOutOfRangeException(nameof(message), "message data exceeds maxmium message size");
 

@@ -14,12 +14,10 @@ namespace KubeMQ.Contract.Factories
             return data;
         }
 
-        public byte[] Encrypt(Stream data, out Dictionary<string, string> headers)
+        public byte[] Encrypt(byte[] data, out Dictionary<string, string> headers)
         {
             headers = new Dictionary<string, string>();
-            var result = new byte[data.Length];
-            data.Read(result, 0, result.Length);
-            return result;
+            return data;
         }
     }
 }

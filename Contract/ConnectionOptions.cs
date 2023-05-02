@@ -59,9 +59,9 @@ namespace KubeMQ.Contract
         }
 
 
-        public IConnection EstablishConnection()
+        public IConnection EstablishConnection(IGlobalMessageEncoder? globalMessageEncoder=null,IGlobalMessageEncryptor? globalMessageEncryptor=null)
         {
-            return new Connection(this);
+            return new Connection(this,globalMessageEncoder,globalMessageEncryptor);
         }
     }
 }

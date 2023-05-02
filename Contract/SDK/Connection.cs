@@ -9,20 +9,25 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace KubeMQ.Contract.SDK.Grpc
 {
     internal class Connection : IConnection, ILogProvider, IDisposable
     {
         private readonly ConnectionOptions connectionOptions;
+        private readonly IGlobalMessageEncoder? globalMessageEncoder;
+        private readonly IGlobalMessageEncryptor? globalMessageEncryptor;
         private readonly kubemq.kubemqClient client;
         private readonly List<IMessageSubscription> subscriptions;
         private readonly ReaderWriterLockSlim dataLock = new ReaderWriterLockSlim();
         private IEnumerable<object> typeFactories;
 
-        public Connection(ConnectionOptions connectionOptions)
+        public Connection(ConnectionOptions connectionOptions, IGlobalMessageEncoder? globalMessageEncoder, IGlobalMessageEncryptor? globalMessageEncryptor)
         {
             this.connectionOptions = connectionOptions;
+            this.globalMessageEncoder = globalMessageEncoder;
+            this.globalMessageEncryptor=globalMessageEncryptor;
             log(LogLevel.Debug, "Attempting to establish connection to server {}", connectionOptions.Address);
             Channel channel;
             var sslCreds = connectionOptions.SSLCredentials;
@@ -47,7 +52,7 @@ namespace KubeMQ.Contract.SDK.Grpc
             dataLock.ExitReadLock();
             if (result==null)
             {
-                result = new TypeFactory<T>();
+                result = new TypeFactory<T>(globalMessageEncoder,globalMessageEncryptor);
                 dataLock.EnterWriteLock();
                 if (!typeFactories.Any(fact => fact.GetType().GetGenericArguments()[0]==typeof(T)))
                     typeFactories = typeFactories.Append(result);
@@ -91,7 +96,7 @@ namespace KubeMQ.Contract.SDK.Grpc
             }
             catch (Exception ex)
             {
-                log(LogLevel.Error, "Exception occured in Send Message:{}, Status: {}", ex.Message);
+                log(LogLevel.Error, "Exception occured in Send Message:{}", ex.Message);
                 return new TransmissionResult()
                 {
                     IsError=true,
