@@ -1,4 +1,5 @@
-﻿using KubeMQ.Contract.Attributes;
+﻿using Google.Protobuf.Collections;
+using KubeMQ.Contract.Attributes;
 using KubeMQ.Contract.SDK.Grpc;
 using KubeMQ.Contract.SDK.Interfaces;
 using System;
@@ -10,33 +11,26 @@ using System.Threading.Tasks;
 
 namespace KubeMQ.Contract.SDK.Messages
 {
-    internal class KubeEnqueue<T> : KubeMessage<T>, IKubeEnqueue
+    internal class KubeEnqueue : KubeMessage, IKubeEnqueue
     {
-        private readonly int? delaySeconds;
-        public int? DelaySeconds => delaySeconds;
-
-        private readonly int? expirationSeconds;
-        public int? ExpirationSeconds => expirationSeconds;
-
-        private readonly int? maxCount;
-        public int? MaxSize => maxCount;
-
-        private readonly string? maxCountChannel;
-        public string? MaxCountChannel => maxCountChannel;
+        public int? DelaySeconds { get; init; }
+        public int? ExpirationSeconds { get; init; }
+        public int? MaxSize { get; init; }
+        public string? MaxCountChannel { get; init; }
 
         public QueueMessagePolicy Policy
         {
             get
             {
                 var result = new QueueMessagePolicy();
-                if (delaySeconds!=null)
-                    result.DelaySeconds=delaySeconds.Value;
-                if (expirationSeconds!=null)
-                    result.ExpirationSeconds=expirationSeconds.Value;
-                if (maxCount!=null)
-                    result.MaxReceiveCount=maxCount.Value;
-                if (maxCountChannel!=null)
-                    result.MaxReceiveQueue=maxCountChannel!;
+                if (DelaySeconds!=null)
+                    result.DelaySeconds=DelaySeconds.Value;
+                if (ExpirationSeconds!=null)
+                    result.ExpirationSeconds=ExpirationSeconds.Value;
+                if (MaxSize!=null)
+                    result.MaxReceiveCount=MaxSize.Value;
+                if (MaxCountChannel!=null)
+                    result.MaxReceiveQueue=MaxCountChannel!;
                 return result;
             }
         }
@@ -45,29 +39,24 @@ namespace KubeMQ.Contract.SDK.Messages
             get
             {
                 var result = new QueueMessageAttributes();
-                if (delaySeconds!=null)
-                    result.DelayedTo = Utility.ToUnixTime(DateTime.Now.AddSeconds(delaySeconds.Value));
-                if (expirationSeconds!=null)
-                    result.ExpirationAt = Utility.ToUnixTime(DateTime.Now.AddSeconds(expirationSeconds.Value));
-                if (maxCount!=null)
-                    result.ReceiveCount = maxCount.Value;
+                if (DelaySeconds!=null)
+                    result.DelayedTo = Utility.ToUnixTime(DateTime.Now.AddSeconds(DelaySeconds.Value));
+                if (ExpirationSeconds!=null)
+                    result.ExpirationAt = Utility.ToUnixTime(DateTime.Now.AddSeconds(ExpirationSeconds.Value));
+                if (MaxSize!=null)
+                    result.ReceiveCount = MaxSize.Value;
                 return result;
             }
         }
 
-        public KubeEnqueue(T message, ConnectionOptions connectionOptions, string? channel,int? delaySeconds,int? expirationSeconds, int? maxCount, string? maxCountChannel,Dictionary<string, string>? tagCollection) 
-            : base(message, connectionOptions, channel, tagCollection)
+        public KubeEnqueue(IKubeMessage baseMessage)
         {
-            var policy = typeof(T).GetCustomAttributes<MessageQueuePolicy>().FirstOrDefault();
-            this.delaySeconds = delaySeconds;
-            this.expirationSeconds = expirationSeconds??(policy==null ? null : policy.ExpirationSeconds);
-            this.maxCount = maxCount??(policy==null ? null : policy.MaxCount);
-            this.maxCountChannel=maxCountChannel??(policy==null ? null : policy.MaxCountChannel);
-
-            if ((this.maxCount!=null && this.maxCountChannel==null)
-                ||(this.maxCount==null&&this.maxCountChannel!=null))
-                throw new ArgumentOutOfRangeException("You must specify both the maxRecieveCount and maxRecieveQueue if you are specifying either");
-
+            ID=baseMessage.ID;
+            MetaData=baseMessage.MetaData;
+            Channel=baseMessage.Channel;
+            ClientID=baseMessage.ClientID;
+            Body=baseMessage.Body;
+            Tags = baseMessage.Tags;
         }
 
         

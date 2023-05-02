@@ -1,4 +1,5 @@
 ﻿using KubeMQ.Contract.Attributes;
+using KubeMQ.Contract.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace KubeMQ.Contract.SDK
 {
-    internal class KubeSubscription
+    internal class KubeSubscription<T>
     {
         public string RequestID => Guid.NewGuid().ToString();
         private readonly string clientID;
@@ -19,10 +20,10 @@ namespace KubeMQ.Contract.SDK
         public string Group => group;
 
 
-        public KubeSubscription(Type messageType, ConnectionOptions connectionOptions, string? channel = null,string group = "")
+        public KubeSubscription(ConnectionOptions connectionOptions, string? channel = null,string group = "")
         {
             this.clientID=connectionOptions.ClientId;
-            this.channel = channel??messageType.GetCustomAttributes<MessageChannel>().Select(mc => mc.Name).FirstOrDefault(String.Empty);
+            this.channel = channel??typeof(T).GetCustomAttributes<MessageChannel>().Select(mc => mc.Name).FirstOrDefault(String.Empty);
             this.group=group;
             if (string.IsNullOrEmpty(this.channel))
                 throw new ArgumentNullException(nameof(channel), "message must have a channel value");

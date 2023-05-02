@@ -17,7 +17,8 @@ namespace KubeMQ.Contract.Subscriptions
     internal class EventSubscription<T> : IMessageSubscription
     {
         public Guid ID => Guid.NewGuid();
-        private readonly KubeSubscription subscription;
+        private readonly IMessageFactory<T> messageFactory;
+        private readonly KubeSubscription<T> subscription;
         private readonly kubemq.kubemqClient client;
         private readonly ConnectionOptions options;
         private readonly Action<IMessage<T>> messageRecieved;
@@ -27,8 +28,9 @@ namespace KubeMQ.Contract.Subscriptions
         private bool active = true;
         private readonly ILogProvider logProvider;
 
-        public EventSubscription(KubeSubscription subscription, kubemq.kubemqClient client, ConnectionOptions options, Action<IMessage<T>> messageRecieved, Action<string> errorRecieved, CancellationToken cancellationToken, long storageOffset,ILogProvider logProvider)
+        public EventSubscription(IMessageFactory<T> messageFactory,KubeSubscription<T> subscription, kubemq.kubemqClient client, ConnectionOptions options, Action<IMessage<T>> messageRecieved, Action<string> errorRecieved, CancellationToken cancellationToken, long storageOffset,ILogProvider logProvider)
         {
+            this.messageFactory=messageFactory;
             this.subscription = subscription;
             this.client = client;
             this.options = options;
@@ -78,7 +80,7 @@ namespace KubeMQ.Contract.Subscriptions
                                 try
                                 {
                                     logProvider.LogTrace("Message recieved {} on subscription {}", evnt.EventID, ID);
-                                    var msg = Utility.ConvertMessage<T>(logProvider,evnt);
+                                    var msg = messageFactory.ConvertMessage(logProvider, evnt);
                                     messageRecieved(msg);
                                 }
                                 catch (Exception e)

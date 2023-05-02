@@ -15,40 +15,13 @@ using System.Threading.Tasks;
 
 namespace KubeMQ.Contract.SDK.Messages
 {
-    internal abstract class KubeMessage<T> : IKubeMessage
+    internal class KubeMessage : IKubeMessage
     {
-        public string ID => Guid.NewGuid().ToString();
-
-        private readonly string _metaData;
-        public string MetaData => _metaData;
-
-        private readonly string _channel;
-        public string Channel => _channel;
-
-        private readonly string _clientID;
-        public string ClientID => _clientID;
-
-        private readonly byte[] _body;
-        public byte[] Body => _body;
-
-        private readonly MapField<string, string> _tags;
-        public MapField<string, string> Tags => _tags;
-
-        public KubeMessage(T message, ConnectionOptions connectionOptions, string? channel, Dictionary<string, string>? tagCollection)
-        {
-            _tags = new MapField<string, string>();
-            if (tagCollection!=null)
-            {
-                foreach (var tag in tagCollection)
-                    _tags.Add(tag.Key, tag.Value);
-            }
-            _clientID = connectionOptions.ClientId;
-            _channel = channel ?? typeof(T).GetCustomAttributes<MessageChannel>().Select(mc => mc.Name).FirstOrDefault(string.Empty);
-            if (string.IsNullOrEmpty(_channel))
-                throw new ArgumentNullException(nameof(Channel), "message must have a channel value");
-            Utility.ConvertMessage(message, connectionOptions, out _body, out _metaData);
-            if (_body.Length > connectionOptions.MaxBodySize)
-                throw new ArgumentOutOfRangeException(nameof(message), "message data exceeds maxmium message size");
-        }
+        public string ID { get; init; } = Guid.NewGuid().ToString();
+        public string MetaData { get; init; } = string.Empty;
+        public string Channel { get; init; } = string.Empty;
+        public string ClientID { get; init; } = string.Empty;
+        public byte[] Body { get; init; } = Array.Empty<byte>();
+        public MapField<string, string> Tags { get; init; } = new MapField<string, string>();
     }
 }

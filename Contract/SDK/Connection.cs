@@ -1,5 +1,6 @@
 ﻿using Google.Protobuf;
 using Grpc.Core;
+using KubeMQ.Contract.Factories;
 using KubeMQ.Contract.Interfaces;
 using KubeMQ.Contract.Messages;
 using KubeMQ.Contract.SDK.Messages;
@@ -16,6 +17,8 @@ namespace KubeMQ.Contract.SDK.Grpc
         private readonly ConnectionOptions connectionOptions;
         private readonly kubemq.kubemqClient client;
         private readonly List<IMessageSubscription> subscriptions;
+        private readonly ReaderWriterLockSlim dataLock = new ReaderWriterLockSlim();
+        private IEnumerable<object> typeFactories;
 
         public Connection(ConnectionOptions connectionOptions)
         {
@@ -24,14 +27,9 @@ namespace KubeMQ.Contract.SDK.Grpc
             Channel channel;
             var sslCreds = connectionOptions.SSLCredentials;
             channel = new Channel(this.connectionOptions.Address, (sslCreds==null ? ChannelCredentials.Insecure : sslCreds));
-            this.client = new kubemq.kubemqClient(channel);
-            this.subscriptions = new();
-        }
-
-        private void registerAssembly(Assembly assembly)
-        {
-            ConverterFactory.RegisterAssembly(this, assembly);
-            EncoderFactory.RegisterAssembly(this, assembly);
+            client = new kubemq.kubemqClient(channel);
+            subscriptions = new();
+            typeFactories = Array.Empty<object>();
         }
 
         public IPingResult Ping()
@@ -42,12 +40,27 @@ namespace KubeMQ.Contract.SDK.Grpc
             return new KubeMQ.Contract.SDK.PingResult(rec);
         }
 
+        private IMessageFactory<T> getMessageFactory<T>()
+        {
+            dataLock.EnterReadLock();
+            var result = (IMessageFactory<T>?)typeFactories.FirstOrDefault(fact => fact.GetType().GetGenericArguments()[0]==typeof(T));
+            dataLock.ExitReadLock();
+            if (result==null)
+            {
+                result = new TypeFactory<T>();
+                dataLock.EnterWriteLock();
+                if (!typeFactories.Any(fact => fact.GetType().GetGenericArguments()[0]==typeof(T)))
+                    typeFactories = typeFactories.Append(result);
+                dataLock.ExitWriteLock();
+            }
+            return result;
+        }
+
         public async Task<ITransmissionResult> Send<T>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, Dictionary<string, string>? tagCollection = null)
         {
-            registerAssembly(Assembly.GetCallingAssembly());
             try
             {
-                var msg = new KubeEvent<T>(message, connectionOptions, channel,tagCollection);
+                var msg = getMessageFactory<T>().Event(message,connectionOptions, channel, tagCollection);
                 log(LogLevel.Information, "Sending Message {} of type {}",msg.ID, typeof(T).Name);
                 var res = await client.SendEventAsync(new Event
                 {
@@ -89,10 +102,9 @@ namespace KubeMQ.Contract.SDK.Grpc
 
         public async Task<Contract.Interfaces.IResultMessage<R>> SendRPC<T, R>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, int? timeout = null, RPCType? type = null, Dictionary<string, string>? tagCollection = null)
         {
-            registerAssembly(Assembly.GetCallingAssembly());
             try
             {
-                var msg = new KubeRequest<T, R>(message, connectionOptions, timeout, channel,type,tagCollection);
+                var msg = getMessageFactory<T>().Request<R>(message, connectionOptions, channel, tagCollection,timeout,type);
                 log(LogLevel.Information, "Sending RPC Message {} of type {}", msg.ID, typeof(T).Name);
                 var res = await client.SendRequestAsync(new Request()
                 {
@@ -112,7 +124,7 @@ namespace KubeMQ.Contract.SDK.Grpc
                         IsError=true,
                         Error=res.Error
                     };
-                return Utility.ConvertMessage<R>(this,res);
+                return getMessageFactory<R>().ConvertMessage(this, res);
             }
             catch (RpcException ex)
             {
@@ -136,10 +148,9 @@ namespace KubeMQ.Contract.SDK.Grpc
 
         public async Task<ITransmissionResult> EnqueueMessage<T>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, int? expirationSeconds = null, int? delaySeconds = null, int? maxQueueSize = null, string? maxQueueChannel = null, Dictionary<string, string>? tagCollection = null)
         {
-            registerAssembly(Assembly.GetCallingAssembly());
             try
             {
-                var msg = new KubeEnqueue<T>(message, connectionOptions, channel, delaySeconds, expirationSeconds, maxQueueSize, maxQueueChannel,tagCollection);
+                var msg = getMessageFactory<T>().Enqueue(message, connectionOptions, channel, tagCollection, delaySeconds, expirationSeconds, maxQueueSize, maxQueueChannel);
                 log(LogLevel.Information, "Sending EnqueueMessage {} of type {}", msg.ID, typeof(T).Name);
                 var res = await client.SendQueueMessageAsync(new QueueMessage()
                 {
@@ -182,10 +193,9 @@ namespace KubeMQ.Contract.SDK.Grpc
 
         public async Task<IBatchTransmissionResult> EnqueueMessages<T>(IEnumerable<T> messages, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, int? expirationSeconds = null, int? delaySeconds = null, int? maxQueueSize = null, string? maxQueueChannel = null, Dictionary<string, string>? tagCollection = null)
         {
-            registerAssembly(Assembly.GetCallingAssembly());
             try
             {
-                var msg = new KubeBatchEnqueue<T>(messages, connectionOptions, channel, delaySeconds, expirationSeconds, maxQueueSize, maxQueueChannel,tagCollection);
+                var msg = getMessageFactory<T>().Enqueue(messages, connectionOptions, channel, tagCollection, delaySeconds, expirationSeconds, maxQueueSize, maxQueueChannel);
                 log(LogLevel.Information, "Sending EnqueueMessages {} of type {}", msg.ID, typeof(T).Name);
                 var res = await client.SendQueueMessagesBatchAsync(
                     new QueueMessagesBatchRequest()
@@ -230,8 +240,7 @@ namespace KubeMQ.Contract.SDK.Grpc
 
         public Guid Subscribe<T>(Action<Contract.Interfaces.IMessage<T>> messageRecieved, Action<string> errorRecieved, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, string group = "", long storageOffset = 0)
         {
-            registerAssembly(Assembly.GetCallingAssembly());
-            var sub = new EventSubscription<T>(new KubeSubscription(typeof(T), this.connectionOptions, channel: channel, group: group), this.client, this.connectionOptions, messageRecieved, errorRecieved, cancellationToken, storageOffset,this);
+            var sub = new EventSubscription<T>(getMessageFactory<T>(),new KubeSubscription<T>(this.connectionOptions, channel: channel, group: group), this.client, this.connectionOptions, messageRecieved, errorRecieved, cancellationToken, storageOffset,this);
             log(LogLevel.Information, "Requesting Subscribe {} of type {}", sub.ID, typeof(T).Name);
             lock (subscriptions)
             {
@@ -249,8 +258,7 @@ namespace KubeMQ.Contract.SDK.Grpc
             RPCType? commandType = null
         )
         {
-            registerAssembly(Assembly.GetCallingAssembly());
-            var sub = new RPCSubscription<T, R>(new KubeSubscription(typeof(T), this.connectionOptions, channel: channel, group: group),
+            var sub = new RPCSubscription<T, R>(getMessageFactory<T>(),getMessageFactory<R>(),new KubeSubscription<T>(this.connectionOptions, channel: channel, group: group),
                 this.client,
                 this.connectionOptions, processMessage, errorRecieved, cancellationToken, 
                 this, commandType: commandType);
@@ -264,9 +272,8 @@ namespace KubeMQ.Contract.SDK.Grpc
 
         public IMessageQueue<T> SubscribeToQueue<T>(CancellationToken cancellationToken = default, string? channel = null)
         {
-            registerAssembly(Assembly.GetCallingAssembly());
             log(LogLevel.Information, "Requesting SubscribeToQueue of type {}", typeof(T).Name);
-            return new MessageQueue<T>(connectionOptions, client,this, channel);
+            return new MessageQueue<T>(getMessageFactory<T>(),connectionOptions, client,this, channel);
         }
 
         public void Unsubscribe(Guid id)
@@ -293,6 +300,7 @@ namespace KubeMQ.Contract.SDK.Grpc
                 }
                 subscriptions.Clear();
             }
+            dataLock.Dispose();
         }
 
         #region ILogProvider

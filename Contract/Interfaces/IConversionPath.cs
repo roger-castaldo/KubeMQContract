@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace KubeMQ.Contract.Interfaces
 {
-    public interface ITransmittedMessage : IMessageHeader,ITransmissionResult
+    internal interface IConversionPath<T>
     {
-        
+        T? ConvertMessage(ILogProvider logProvider, Stream stream,IMessageHeader messageHeader);
     }
 }

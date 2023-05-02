@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace KubeMQ.Contract.SDK.Interfaces
 {
-    internal interface IKubeEnqueue
+    internal interface IKubeEnqueue : IKubeMessage
     {
         int? DelaySeconds { get; }
         int? ExpirationSeconds { get; }

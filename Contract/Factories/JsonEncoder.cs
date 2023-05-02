@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KubeMQ.Contract
+namespace KubeMQ.Contract.Factories
 {
     internal class JsonEncoder<T> : IMessageEncoder<T>
     {
@@ -16,9 +16,9 @@ namespace KubeMQ.Contract
 
         public byte[] Encode(T message)
         {
-            return System.Text.UTF8Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize<T>(message, new System.Text.Json.JsonSerializerOptions()
+            return Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(message, new System.Text.Json.JsonSerializerOptions()
             {
-                WriteIndented=false
+                WriteIndented = false
             }));
         }
     }

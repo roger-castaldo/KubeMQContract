@@ -17,7 +17,9 @@ namespace KubeMQ.Contract.Subscriptions
     internal class RPCSubscription<T,R> : IMessageSubscription
     {
         public Guid ID => Guid.NewGuid();
-        private readonly KubeSubscription subscription;
+        private readonly IMessageFactory<T> incomingFactory;
+        private readonly IMessageFactory<R> outgoingFactory;
+        private readonly KubeSubscription<T> subscription;
         private readonly kubemq.kubemqClient client;
         private readonly ConnectionOptions connectionOptions;
         private readonly Func<IMessage<T>, TaggedResponse<R>> processMessage;
@@ -27,8 +29,10 @@ namespace KubeMQ.Contract.Subscriptions
         private readonly ILogProvider logProvider;
         private bool active = true;
 
-        public RPCSubscription(KubeSubscription subscription, kubemq.kubemqClient client, ConnectionOptions connectionOptions, Func<IMessage<T>, TaggedResponse<R>> processMessage, Action<string> errorRecieved, CancellationToken cancellationToken,ILogProvider logProvider, RPCType? commandType, string? responseChannel = null)
+        public RPCSubscription(IMessageFactory<T> incomingFactory, IMessageFactory<R> outgoingFactory,KubeSubscription<T> subscription, kubemq.kubemqClient client, ConnectionOptions connectionOptions, Func<IMessage<T>, TaggedResponse<R>> processMessage, Action<string> errorRecieved, CancellationToken cancellationToken,ILogProvider logProvider, RPCType? commandType, string? responseChannel = null)
         {
+            this.incomingFactory=incomingFactory;
+            this.outgoingFactory=outgoingFactory;
             this.subscription = subscription;
             this.client = client;
             this.connectionOptions = connectionOptions;
@@ -75,7 +79,7 @@ namespace KubeMQ.Contract.Subscriptions
                             {
                                 var req = call.ResponseStream.Current;
                                 logProvider.LogTrace("Message recieved {} on RPC subscription {}", req.RequestID, ID);
-                                var msg = Utility.ConvertMessage<T>(logProvider,req);
+                                var msg = incomingFactory.ConvertMessage(logProvider,req);
                                 try
                                 {
                                     if (msg==null)
@@ -83,7 +87,7 @@ namespace KubeMQ.Contract.Subscriptions
                                     var result = processMessage(msg);
                                     if (result==null)
                                         throw new NullReferenceException(nameof(result));
-                                    var response = new KubeResponse<R>(result.Response, this.connectionOptions, req.ReplyChannel,result.Tags);
+                                    var response = outgoingFactory.Response(result.Response, this.connectionOptions, req.ReplyChannel,result.Tags);
                                     logProvider.LogTrace("Response generated for {} on RPC subscription {}", req.RequestID, ID);
                                     client.SendResponse(new Response()
                                     { 

@@ -6,8 +6,9 @@ using System.Threading.Tasks;
 
 namespace KubeMQ.Contract.Interfaces
 {
-    public interface ITransmittedMessage : IMessageHeader,ITransmissionResult
+    public interface IMessageHeader
     {
-        
+        string? this[string tagKey] { get; }
+        IEnumerable<string> Keys { get; }
     }
 }

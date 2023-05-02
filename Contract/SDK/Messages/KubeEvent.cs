@@ -1,4 +1,5 @@
-﻿using KubeMQ.Contract.Attributes;
+﻿using Grpc.Core;
+using KubeMQ.Contract.Attributes;
 using KubeMQ.Contract.SDK.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -9,11 +10,18 @@ using System.Threading.Tasks;
 
 namespace KubeMQ.Contract.SDK.Messages
 {
-    internal class KubeEvent<T> : KubeMessage<T>,IKubeEvent
+    internal class KubeEvent : KubeMessage,IKubeEvent
     {
-        public bool Stored => typeof(T).GetCustomAttributes<StoredMessage>().FirstOrDefault() != null;
+        public bool Stored { get; init; }
 
-        public KubeEvent(T message, ConnectionOptions connectionOptions, string? channel, Dictionary<string, string>? tagCollection)
-            :base(message,connectionOptions,channel,tagCollection) { }
+        public KubeEvent(IKubeMessage baseMessage)
+        {
+            ID=baseMessage.ID;
+            MetaData=baseMessage.MetaData;
+            Channel=baseMessage.Channel;
+            ClientID=baseMessage.ClientID;
+            Body=baseMessage.Body;
+            Tags = baseMessage.Tags;
+        }
     }
 }

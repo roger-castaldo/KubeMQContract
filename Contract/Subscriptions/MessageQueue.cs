@@ -16,7 +16,8 @@ namespace KubeMQ.Contract.Subscriptions
     {
         private const int PEEK_TIMEOUT_SECONDS = 1;
         private const int POP_TIMEOUT_SECONDS = PEEK_TIMEOUT_SECONDS * 5;
-        
+
+        private readonly IMessageFactory<T> messageFactory;
         private readonly ConnectionOptions connectionOptions;
         private readonly kubemq.kubemqClient client;
         private readonly string channel;
@@ -25,8 +26,9 @@ namespace KubeMQ.Contract.Subscriptions
 
         public Guid ID => Guid.NewGuid();
 
-        public MessageQueue(ConnectionOptions connectionOptions, kubemq.kubemqClient client,ILogProvider logProvider, string? channel)
+        public MessageQueue(IMessageFactory<T> messageFactory,ConnectionOptions connectionOptions, kubemq.kubemqClient client,ILogProvider logProvider, string? channel)
         {
+            this.messageFactory=messageFactory;
             this.connectionOptions=connectionOptions;
             this.client=client;
             this.logProvider = logProvider;
@@ -71,7 +73,7 @@ namespace KubeMQ.Contract.Subscriptions
             }, connectionOptions.GrpcMetadata, null, cancellationToken.Token);
             logProvider.LogTrace("Peek results for Queue {} (IsError:{},Error:{},MessagesRecieved:{}",ID,res.IsError,res.Error,res.MessagesReceived);
             if (res!=null && !res.IsError && string.IsNullOrEmpty(res.Error)&&res.MessagesReceived>0)
-                return Utility.ConvertMessage<T>(logProvider,res.Messages.First());
+                return messageFactory.ConvertMessage(logProvider,res.Messages.First());
             return default(IMessage<T>?);
         }
 
@@ -97,7 +99,7 @@ namespace KubeMQ.Contract.Subscriptions
             }, connectionOptions.GrpcMetadata, null, cancellationToken.Token);
             logProvider.LogTrace("Pop results for Queue {} (IsError:{},Error:{},MessagesRecieved:{}", ID, res.IsError, res.Error, res.MessagesReceived);
             if (res!=null && !res.IsError && string.IsNullOrEmpty(res.Error)&&res.MessagesReceived>0)
-                return res.Messages.Select(msg => Utility.ConvertMessage<T>(logProvider,msg));
+                return res.Messages.Select(msg => messageFactory.ConvertMessage(logProvider,msg));
             return Array.Empty<IMessage<T>>();
         }
 
