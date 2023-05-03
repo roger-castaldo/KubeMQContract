@@ -2,25 +2,53 @@
 using KubeMQ.Contract.Interfaces;
 using KubeMQ.Contract.SDK.Grpc;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace KubeMQ.Contract
 {
+    /// <summary>
+    /// Houses the Connection Settings to use to connect to the particular instance of KubeMQ
+    /// </summary>
     public class ConnectionOptions
     {
+        /// <summary>
+        /// The address and port to connection to.  This can be the dns name or an ip address.
+        /// Use the format {ip/name}:{portnumber}.  Typically KubeMQ is configured to listen on 
+        /// port 50000
+        /// </summary>
         public string Address { get; init; } = "localhost:50000";
-        public string ClientId { get; } = Guid.NewGuid().ToString();
-        public double CallTimeout { get; init; } = 0;
+        /// <summary>
+        /// The Unique Identification to be used when connecting to the KubeMQ server
+        /// </summary>
+        public string ClientId { get; init; } = Guid.NewGuid().ToString();
+        /// <summary>
+        /// The authentication token to use when connecting to the KubeMQ server
+        /// </summary>
         public string AuthToken { get; init; } = string.Empty;
+        /// <summary>
+        /// The SSL Root certificate to use when connecting to the KubeMQ server
+        /// </summary>
         public string SSLRootCertificate { get; init; } = string.Empty;
+        /// <summary>
+        /// The SSL Key to use when connecting to the KubeMQ server
+        /// </summary>
         public string SSLKey { get; init; } = string.Empty;
+        /// <summary>
+        /// The SSL Certificat to use when connecting to the KubeMQ server
+        /// </summary>
         public string SSLCertificate { get; init; } = string.Empty;
+        /// <summary>
+        /// Milliseconds to wait in between attempted reconnects to the KubeMQ server
+        /// </summary>
         public int ReconnectInterval { get; init; } = 1000;
+        /// <summary>
+        /// The maximum body size in bytes configured on the KubeMQ server, default is 4096.
+        /// If the encoded message exceeds the size, it will zip it in an attempt to transmit the 
+        /// message.  If it still fails in size, an exception will be thrown.
+        /// </summary>
         public int MaxBodySize { get; init; } = 4096;
+        /// <summary>
+        /// The ILogger instance to use for logging against any connections produced by these options.
+        /// </summary>
         public ILogger? Logger { get; init; } = null;
 
         internal SslCredentials? SSLCredentials
@@ -47,18 +75,14 @@ namespace KubeMQ.Contract
             }
         }
 
-        internal CallOptions CallOptions
-        {
-            get
-            {
-                var result = new CallOptions();
-                if (CallTimeout > 0)
-                    result = result.WithDeadline(DateTime.Now.AddMilliseconds(CallTimeout));
-                return result;
-            }
-        }
-
-
+        /// <summary>
+        /// Called to use the Current Options to establish a connection to the KubeMQ server.
+        /// </summary>
+        /// <param name="globalMessageEncoder">If desired, an encoder can be specified here and will be used to encode message bodies as the default.  
+        /// A type specific encoder can be specified to override this for that particular type of message.</param>
+        /// <param name="globalMessageEncryptor">If desired, an encryptor can be specified here and will be used to secure the message bodies as the default.  
+        /// A type specific encryptor can be specified to override this for that particular type of message.</param>
+        /// <returns></returns>
         public IConnection EstablishConnection(IGlobalMessageEncoder? globalMessageEncoder=null,IGlobalMessageEncryptor? globalMessageEncryptor=null)
         {
             return new Connection(this,globalMessageEncoder,globalMessageEncryptor);

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace KubeMQ.Contract.Messages
 {
-    internal class TransmittedMessage : TransmissionResult, ITransmittedMessage
+    internal class TransmittedMessage : TransmissionResult, IMessageHeader,ITransmissionResult
     {
         internal MapField<string, string>? Tags { get; init; }
 

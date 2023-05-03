@@ -165,7 +165,7 @@ namespace KubeMQ.Contract.Factories
 
             var body = messageEncoder.Encode(message);
 
-            Dictionary<string, string> messageHeader = null;
+            Dictionary<string, string> messageHeader;
 
             if (globalMessageEncryptor!=null && messageEncryptor is NonEncryptor<T>)
                 body = globalMessageEncryptor.Encrypt(body, out messageHeader);

@@ -25,11 +25,13 @@ namespace KubeMQ.Contract.Subscriptions
         private readonly Action<string> errorRecieved;
         private readonly CancellationTokenSource cancellationToken;
         private readonly long storageOffset;
+        private readonly Subscribe.Types.EventsStoreType eventsStoreStyle;
         private bool active = true;
         private readonly ILogProvider logProvider;
 
-        public EventSubscription(IMessageFactory<T> messageFactory,KubeSubscription<T> subscription, kubemq.kubemqClient client, ConnectionOptions options, Action<IMessage<T>> messageRecieved, Action<string> errorRecieved, CancellationToken cancellationToken, long storageOffset,ILogProvider logProvider)
+        public EventSubscription(IMessageFactory<T> messageFactory,KubeSubscription<T> subscription, kubemq.kubemqClient client, ConnectionOptions options, Action<IMessage<T>> messageRecieved, Action<string> errorRecieved, CancellationToken cancellationToken, long storageOffset,ILogProvider logProvider,MessageReadStyle? messageReadStyle)
         {
+            messageReadStyle = messageReadStyle??typeof(T).GetCustomAttributes<StoredMessage>().Select(sm => sm.Style).FirstOrDefault();
             this.messageFactory=messageFactory;
             this.subscription = subscription;
             this.client = client;
@@ -38,6 +40,7 @@ namespace KubeMQ.Contract.Subscriptions
             this.errorRecieved = errorRecieved;
             this.storageOffset = storageOffset;
             this.logProvider=logProvider;
+            this.eventsStoreStyle=(messageReadStyle==null ? Subscribe.Types.EventsStoreType.Undefined : (Subscribe.Types.EventsStoreType)(int)messageReadStyle);
             this.cancellationToken = new CancellationTokenSource();
 
             cancellationToken.Register(() =>
@@ -46,7 +49,9 @@ namespace KubeMQ.Contract.Subscriptions
                 this.cancellationToken.Cancel();
             });
 
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             start();
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
         }
 
         private async Task start()
@@ -65,7 +70,7 @@ namespace KubeMQ.Contract.Subscriptions
                         ClientID = subscription.ClientID,
                         Group = subscription.Group,
                         SubscribeTypeData = eventType,
-                        EventsStoreTypeData = typeof(T).GetCustomAttributes<StoredMessage>().Select(sm => sm.EventsStoreType).FirstOrDefault(Subscribe.Types.EventsStoreType.Undefined),
+                        EventsStoreTypeData = eventsStoreStyle,
                         EventsStoreTypeValue = storageOffset
                     },
                         options.GrpcMetadata,

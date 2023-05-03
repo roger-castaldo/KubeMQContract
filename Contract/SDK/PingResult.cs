@@ -20,8 +20,8 @@ namespace KubeMQ.Contract.SDK
 
         public string Version => this.result.Version;
 
-        public long ServerStartTime => this.result.ServerStartTime;
+        public DateTime ServerStartTime => Utility.FromUnixTime(this.result.ServerStartTime);
 
-        public long ServerUpTimeSeconds => this.result.ServerUpTimeSeconds;
+        public TimeSpan ServerUpTime => TimeSpan.FromSeconds(this.result.ServerUpTimeSeconds);
     }
 }
