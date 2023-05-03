@@ -29,9 +29,9 @@ namespace KubeMQ.Contract.Subscriptions
         private bool active = true;
         private readonly ILogProvider logProvider;
 
-        public EventSubscription(IMessageFactory<T> messageFactory,KubeSubscription<T> subscription, kubemq.kubemqClient client, ConnectionOptions options, Action<IMessage<T>> messageRecieved, Action<string> errorRecieved, CancellationToken cancellationToken, long storageOffset,ILogProvider logProvider,MessageReadStyle? messageReadStyle)
+        public EventSubscription(IMessageFactory<T> messageFactory, KubeSubscription<T> subscription, kubemq.kubemqClient client, ConnectionOptions options, Action<IMessage<T>> messageRecieved, Action<string> errorRecieved, long storageOffset, ILogProvider logProvider, MessageReadStyle? messageReadStyle, CancellationToken cancellationToken)
         {
-            messageReadStyle = messageReadStyle??typeof(T).GetCustomAttributes<StoredMessage>().Select(sm => sm.Style).FirstOrDefault();
+            messageReadStyle ??= typeof(T).GetCustomAttributes<StoredMessage>().Select(sm => sm.Style).FirstOrDefault();
             this.messageFactory=messageFactory;
             this.subscription = subscription;
             this.client = client;
@@ -50,11 +50,11 @@ namespace KubeMQ.Contract.Subscriptions
             });
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            start();
+            Start();
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
         }
 
-        private async Task start()
+        private async Task Start()
         {
             var eventType = Subscribe.Types.SubscribeType.Events;
             if (typeof(T).GetCustomAttributes<StoredMessage>().Any())
@@ -64,7 +64,7 @@ namespace KubeMQ.Contract.Subscriptions
             {
                 try
                 {
-                    using (var call = client.SubscribeToEvents(new Subscribe()
+                    using var call = client.SubscribeToEvents(new Subscribe()
                     {
                         Channel = subscription.Channel,
                         ClientID = subscription.ClientID,
@@ -74,25 +74,23 @@ namespace KubeMQ.Contract.Subscriptions
                         EventsStoreTypeValue = storageOffset
                     },
                         options.GrpcMetadata,
-                        null, cancellationToken.Token))
+                        null, cancellationToken.Token);
+                    logProvider.LogTrace("Connection for subscription {} established", ID);
+                    while (active && await call.ResponseStream.MoveNext(cancellationToken.Token))
                     {
-                        logProvider.LogTrace("Connection for subscription {} established",ID);
-                        while (active && await call.ResponseStream.MoveNext(cancellationToken.Token))
+                        if (active)
                         {
-                            if (active)
+                            var evnt = call.ResponseStream.Current;
+                            try
                             {
-                                var evnt = call.ResponseStream.Current;
-                                try
-                                {
-                                    logProvider.LogTrace("Message recieved {} on subscription {}", evnt.EventID, ID);
-                                    var msg = messageFactory.ConvertMessage(logProvider, evnt);
-                                    messageRecieved(msg);
-                                }
-                                catch (Exception e)
-                                {
-                                    logProvider.LogError("Message {} failed on subscription {}.  Message:{}", evnt.EventID, ID,e.Message);
-                                    errorRecieved(e.Message);
-                                }
+                                logProvider.LogTrace("Message recieved {} on subscription {}", evnt.EventID, ID);
+                                var msg = messageFactory.ConvertMessage(logProvider, evnt);
+                                messageRecieved(msg);
+                            }
+                            catch (Exception e)
+                            {
+                                logProvider.LogError("Message {} failed on subscription {}.  Message:{}", evnt.EventID, ID, e.Message);
+                                errorRecieved(e.Message);
                             }
                         }
                     }

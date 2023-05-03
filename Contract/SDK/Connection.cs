@@ -20,7 +20,7 @@ namespace KubeMQ.Contract.SDK.Grpc
         private readonly IGlobalMessageEncryptor? globalMessageEncryptor;
         private readonly kubemq.kubemqClient client;
         private readonly List<IMessageSubscription> subscriptions;
-        private readonly ReaderWriterLockSlim dataLock = new ReaderWriterLockSlim();
+        private readonly ReaderWriterLockSlim dataLock = new();
         private IEnumerable<object> typeFactories;
 
         public Connection(ConnectionOptions connectionOptions, IGlobalMessageEncoder? globalMessageEncoder, IGlobalMessageEncryptor? globalMessageEncryptor)
@@ -28,10 +28,10 @@ namespace KubeMQ.Contract.SDK.Grpc
             this.connectionOptions = connectionOptions;
             this.globalMessageEncoder = globalMessageEncoder;
             this.globalMessageEncryptor=globalMessageEncryptor;
-            log(LogLevel.Debug, "Attempting to establish connection to server {}", connectionOptions.Address);
+            Log(LogLevel.Debug, "Attempting to establish connection to server {}", connectionOptions.Address);
             Channel channel;
             var sslCreds = connectionOptions.SSLCredentials;
-            channel = new Channel(this.connectionOptions.Address, (sslCreds==null ? ChannelCredentials.Insecure : sslCreds));
+            channel = new Channel(this.connectionOptions.Address, (sslCreds??ChannelCredentials.Insecure));
             client = new kubemq.kubemqClient(channel);
             subscriptions = new();
             typeFactories = Array.Empty<object>();
@@ -39,13 +39,13 @@ namespace KubeMQ.Contract.SDK.Grpc
 
         public IPingResult Ping()
         {
-            log(LogLevel.Information, "Calling ping to {}", connectionOptions.Address);
+            Log(LogLevel.Information, "Calling ping to {}", connectionOptions.Address);
             var rec = this.client.Ping(new Empty());
-            log(LogLevel.Information, "Pind result to {} Uptime seconds {}", connectionOptions.Address, rec.ServerUpTimeSeconds);
+            Log(LogLevel.Information, "Pind result to {} Uptime seconds {}", connectionOptions.Address, rec.ServerUpTimeSeconds);
             return new KubeMQ.Contract.SDK.PingResult(rec);
         }
 
-        private IMessageFactory<T> getMessageFactory<T>()
+        private IMessageFactory<T> GetMessageFactory<T>()
         {
             dataLock.EnterReadLock();
             var result = (IMessageFactory<T>?)typeFactories.FirstOrDefault(fact => fact.GetType().GetGenericArguments()[0]==typeof(T));
@@ -65,8 +65,8 @@ namespace KubeMQ.Contract.SDK.Grpc
         {
             try
             {
-                var msg = getMessageFactory<T>().Event(message,connectionOptions, channel, tagCollection);
-                log(LogLevel.Information, "Sending Message {} of type {}",msg.ID, typeof(T).Name);
+                var msg = GetMessageFactory<T>().Event(message,connectionOptions, channel, tagCollection);
+                Log(LogLevel.Information, "Sending Message {} of type {}",msg.ID, typeof(T).Name);
                 var res = await client.SendEventAsync(new Event
                 {
                     EventID = msg.ID,
@@ -77,7 +77,7 @@ namespace KubeMQ.Contract.SDK.Grpc
                     Store = msg.Stored,
                     Tags = { msg.Tags }
                 }, connectionOptions.GrpcMetadata, null, cancellationToken);
-                log(LogLevel.Information, "Transmission Result for {} (IsError:{},Error:{})", msg.ID, !string.IsNullOrEmpty(res.Error), res.Error);
+                Log(LogLevel.Information, "Transmission Result for {} (IsError:{},Error:{})", msg.ID, !string.IsNullOrEmpty(res.Error), res.Error);
                 return new TransmissionResult()
                 {
                     MessageID=new Guid(msg.ID),
@@ -87,7 +87,7 @@ namespace KubeMQ.Contract.SDK.Grpc
             }
             catch (RpcException ex)
             {
-                log(LogLevel.Error, "RPC error occured on Send in send Message:{}, Status: {}", ex.Message, ex.Status);
+                Log(LogLevel.Error, "RPC error occured on Send in send Message:{}, Status: {}", ex.Message, ex.Status);
                 return new TransmissionResult()
                 {
                     IsError=true,
@@ -96,7 +96,7 @@ namespace KubeMQ.Contract.SDK.Grpc
             }
             catch (Exception ex)
             {
-                log(LogLevel.Error, "Exception occured in Send Message:{}", ex.Message);
+                Log(LogLevel.Error, "Exception occured in Send Message:{}", ex.Message);
                 return new TransmissionResult()
                 {
                     IsError=true,
@@ -109,8 +109,8 @@ namespace KubeMQ.Contract.SDK.Grpc
         {
             try
             {
-                var msg = getMessageFactory<T>().Request<R>(message, connectionOptions, channel, tagCollection,timeout,type);
-                log(LogLevel.Information, "Sending RPC Message {} of type {}", msg.ID, typeof(T).Name);
+                var msg = GetMessageFactory<T>().Request<R>(message, connectionOptions, channel, tagCollection,timeout,type);
+                Log(LogLevel.Information, "Sending RPC Message {} of type {}", msg.ID, typeof(T).Name);
                 var res = await client.SendRequestAsync(new Request()
                 {
                     RequestID=msg.ID,
@@ -124,25 +124,25 @@ namespace KubeMQ.Contract.SDK.Grpc
                 }, connectionOptions.GrpcMetadata, null, cancellationToken);
                 if (res==null)
                 {
-                    log(LogLevel.Error, "Transmission Result for RPC {} is null", msg.ID);
+                    Log(LogLevel.Error, "Transmission Result for RPC {} is null", msg.ID);
                     return new ResultMessage<R>()
                     {
                         IsError=true,
                         Error="null response recieved from KubeMQ server"
                     };
                 }
-                log(LogLevel.Information, "Transmission Result for RPC {} (IsError:{},Error:{})", msg.ID, !string.IsNullOrEmpty(res.Error), res.Error);
+                Log(LogLevel.Information, "Transmission Result for RPC {} (IsError:{},Error:{})", msg.ID, !string.IsNullOrEmpty(res.Error), res.Error);
                 if (!res.Executed || !string.IsNullOrEmpty(res.Error))
                     return new ResultMessage<R>()
                     {
                         IsError=true,
                         Error=res.Error
                     };
-                return getMessageFactory<R>().ConvertMessage(this, res);
+                return GetMessageFactory<R>().ConvertMessage(this, res);
             }
             catch (RpcException ex)
             {
-                log(LogLevel.Error, "RPC error occured on SendRPC in send Message:{}, Status: {}", ex.Message, ex.Status);
+                Log(LogLevel.Error, "RPC error occured on SendRPC in send Message:{}, Status: {}", ex.Message, ex.Status);
                 return new ResultMessage<R>()
                 {
                     IsError=true,
@@ -151,7 +151,7 @@ namespace KubeMQ.Contract.SDK.Grpc
             }
             catch (Exception ex)
             {
-                log(LogLevel.Error, "Exception occured in SendRPC Message:{}, Status: {}", ex.Message);
+                Log(LogLevel.Error, "Exception occured in SendRPC Message:{}, Status: {}", ex.Message);
                 return new ResultMessage<R>()
                 {
                     IsError=true,
@@ -164,8 +164,8 @@ namespace KubeMQ.Contract.SDK.Grpc
         {
             try
             {
-                var msg = getMessageFactory<T>().Enqueue(message, connectionOptions, channel, tagCollection, delaySeconds, expirationSeconds, maxQueueSize, maxQueueChannel);
-                log(LogLevel.Information, "Sending EnqueueMessage {} of type {}", msg.ID, typeof(T).Name);
+                var msg = GetMessageFactory<T>().Enqueue(message, connectionOptions, channel, tagCollection, delaySeconds, expirationSeconds, maxQueueSize, maxQueueChannel);
+                Log(LogLevel.Information, "Sending EnqueueMessage {} of type {}", msg.ID, typeof(T).Name);
                 var res = await client.SendQueueMessageAsync(new QueueMessage()
                 {
                     MessageID= msg.ID,
@@ -177,7 +177,7 @@ namespace KubeMQ.Contract.SDK.Grpc
                     Policy = msg.Policy,
                     Attributes = msg.Attributes
                 }, connectionOptions.GrpcMetadata, null, cancellationToken);
-                log(LogLevel.Information, "Transmission Result for EnqueueMessage {} (IsError:{},Error:{})", msg.ID, !string.IsNullOrEmpty(res.Error), res.Error);
+                Log(LogLevel.Information, "Transmission Result for EnqueueMessage {} (IsError:{},Error:{})", msg.ID, !string.IsNullOrEmpty(res.Error), res.Error);
                 return new TransmissionResult()
                 {
                     MessageID=new Guid(msg.ID),
@@ -187,7 +187,7 @@ namespace KubeMQ.Contract.SDK.Grpc
             }
             catch (RpcException ex)
             {
-                log(LogLevel.Error, "RPC error occured on EnqueueMessage in send Message:{}, Status: {}", ex.Message, ex.Status);
+                Log(LogLevel.Error, "RPC error occured on EnqueueMessage in send Message:{}, Status: {}", ex.Message, ex.Status);
                 return new TransmissionResult()
                 {
                     IsError=true,
@@ -196,7 +196,7 @@ namespace KubeMQ.Contract.SDK.Grpc
             }
             catch (Exception ex)
             {
-                log(LogLevel.Error, "Exception occured in EnqueueMessage Message:{}, Status: {}", ex.Message);
+                Log(LogLevel.Error, "Exception occured in EnqueueMessage Message:{}, Status: {}", ex.Message);
                 return new TransmissionResult()
                 {
                     IsError=true,
@@ -209,15 +209,31 @@ namespace KubeMQ.Contract.SDK.Grpc
         {
             try
             {
-                var msg = getMessageFactory<T>().Enqueue(messages, connectionOptions, channel, tagCollection, delaySeconds, expirationSeconds, maxQueueSize, maxQueueChannel);
-                log(LogLevel.Information, "Sending EnqueueMessages {} of type {}", msg.ID, typeof(T).Name);
+                var msg = GetMessageFactory<T>().Enqueue(messages, connectionOptions, channel, tagCollection, delaySeconds, expirationSeconds, maxQueueSize, maxQueueChannel);
+                Log(LogLevel.Information, "Sending EnqueueMessages {} of type {}", msg.ID, typeof(T).Name);
                 var res = await client.SendQueueMessagesBatchAsync(
                     new QueueMessagesBatchRequest()
                     {
                         BatchID=msg.ID.ToString(),
                         Messages={ msg.Messages }
                     }, connectionOptions.GrpcMetadata, null, cancellationToken);
-                log(LogLevel.Information, "Transmission Result for EnqueueMessages {} (Count:{})", msg.ID, res.Results.Count());
+                if (res==null)
+                {
+                    Log(LogLevel.Error, "EnqueueMessages response for {} is null from KubeMQ server", msg.ID);
+                    return new BatchTransmissionResult()
+                    {
+                        MessageID=msg.ID,
+                        Results=new ITransmissionResult[]
+                        {
+                            new TransmissionResult()
+                            {
+                                IsError=true,
+                                Error="null response recieved from KubeMQ host"
+                            }
+                        }
+                    };
+                }
+                Log(LogLevel.Information, "Transmission Result for EnqueueMessages {} (Count:{})", msg.ID, res.Results.Count);
                 return new BatchTransmissionResult()
                 {
                     MessageID=msg.ID,
@@ -234,7 +250,7 @@ namespace KubeMQ.Contract.SDK.Grpc
             }
             catch (RpcException ex)
             {
-                log(LogLevel.Error, "RPC error occured on EnqueueMessages in send Message:{}, Status: {}", ex.Message, ex.Status);
+                Log(LogLevel.Error, "RPC error occured on EnqueueMessages in send Message:{}, Status: {}", ex.Message, ex.Status);
                 return new BatchTransmissionResult()
                 {
                     IsError=true,
@@ -243,7 +259,7 @@ namespace KubeMQ.Contract.SDK.Grpc
             }
             catch (Exception ex)
             {
-                log(LogLevel.Error, "Exception occured in EnqueueMessages Message:{}, Status: {}", ex.Message);
+                Log(LogLevel.Error, "Exception occured in EnqueueMessages Message:{}, Status: {}", ex.Message);
                 return new BatchTransmissionResult()
                 {
                     IsError=true,
@@ -254,8 +270,8 @@ namespace KubeMQ.Contract.SDK.Grpc
 
         public Guid Subscribe<T>(Action<Contract.Interfaces.IMessage<T>> messageRecieved, Action<string> errorRecieved, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null)
         {
-            var sub = new EventSubscription<T>(getMessageFactory<T>(),new KubeSubscription<T>(this.connectionOptions, channel: channel, group: group), this.client, this.connectionOptions, messageRecieved, errorRecieved, cancellationToken, storageOffset,this, messageReadStyle);
-            log(LogLevel.Information, "Requesting Subscribe {} of type {}", sub.ID, typeof(T).Name);
+            var sub = new EventSubscription<T>(GetMessageFactory<T>(), new KubeSubscription<T>(this.connectionOptions, channel: channel, group: group), this.client, this.connectionOptions, messageRecieved, errorRecieved, storageOffset, this, messageReadStyle, cancellationToken);
+            Log(LogLevel.Information, "Requesting Subscribe {} of type {}", sub.ID, typeof(T).Name);
             lock (subscriptions)
             {
                 subscriptions.Add(sub);
@@ -272,11 +288,11 @@ namespace KubeMQ.Contract.SDK.Grpc
             RPCType? commandType = null
         )
         {
-            var sub = new RPCSubscription<T, R>(getMessageFactory<T>(),getMessageFactory<R>(),new KubeSubscription<T>(this.connectionOptions, channel: channel, group: group),
+            var sub = new RPCSubscription<T, R>(GetMessageFactory<T>(), GetMessageFactory<R>(), new KubeSubscription<T>(this.connectionOptions, channel: channel, group: group),
                 this.client,
-                this.connectionOptions, processMessage, errorRecieved, cancellationToken, 
-                this, commandType: commandType);
-            log(LogLevel.Information, "Requesting SubscribeRPC {} of type {}", sub.ID, typeof(T).Name);
+                this.connectionOptions, processMessage, errorRecieved, this,
+                commandType: commandType, cancellationToken: cancellationToken);
+            Log(LogLevel.Information, "Requesting SubscribeRPC {} of type {}", sub.ID, typeof(T).Name);
             lock (subscriptions)
             {
                 subscriptions.Add(sub);
@@ -286,13 +302,13 @@ namespace KubeMQ.Contract.SDK.Grpc
 
         public IMessageQueue<T> SubscribeToQueue<T>(CancellationToken cancellationToken = default, string? channel = null)
         {
-            log(LogLevel.Information, "Requesting SubscribeToQueue of type {}", typeof(T).Name);
-            return new MessageQueue<T>(getMessageFactory<T>(),connectionOptions, client,this, channel);
+            Log(LogLevel.Information, "Requesting SubscribeToQueue of type {}", typeof(T).Name);
+            return new MessageQueue<T>(GetMessageFactory<T>(),connectionOptions, client,this, channel);
         }
 
         public void Unsubscribe(Guid id)
         {
-            log(LogLevel.Information, "Unsubscribing from {}", id);
+            Log(LogLevel.Information, "Unsubscribing from {}", id);
             lock (subscriptions)
             {
                 var sub = subscriptions.FirstOrDefault(s => s.ID == id);
@@ -318,40 +334,41 @@ namespace KubeMQ.Contract.SDK.Grpc
         }
 
         #region ILogProvider
-        private void log(LogLevel level, string message, params object[]? args)
+        private void Log(LogLevel level, string message, params object[]? args)
         {
-            if (connectionOptions.Logger!=null)
-                connectionOptions.Logger.Log(level, message, args);
+#pragma warning disable CA2254 // Template should be a static expression
+            connectionOptions.Logger?.Log(level, message, args);
+#pragma warning restore CA2254 // Template should be a static expression
         }
 
         void ILogProvider.LogInformation(string message, params object[]? args)
         {
-            log(LogLevel.Information, message, args);
+            Log(LogLevel.Information, message, args);
         }
 
         void ILogProvider.LogTrace(string message, params object[]? args)
         {
-            log(LogLevel.Trace, message, args);
+            Log(LogLevel.Trace, message, args);
         }
 
         void ILogProvider.LogWarning(string message, params object[]? args)
         {
-            log(LogLevel.Warning, message, args);
+            Log(LogLevel.Warning, message, args);
         }
 
         void ILogProvider.LogDebug(string message, params object[]? args)
         {
-            log(LogLevel.Debug, message, args);
+            Log(LogLevel.Debug, message, args);
         }
 
         void ILogProvider.LogError(string message, params object[]? args)
         {
-            log(LogLevel.Error, message, args);
+            Log(LogLevel.Error, message, args);
         }
 
         void ILogProvider.LogCritical(string message, params object[]? args)
         {
-            log(LogLevel.Information, message, args);
+            Log(LogLevel.Information, message, args);
         }
         #endregion
     }

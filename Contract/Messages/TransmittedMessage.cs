@@ -19,8 +19,7 @@ namespace KubeMQ.Contract.Messages
             get
             {
                 string? value = null;
-                if (Tags!=null)
-                    Tags.TryGetValue(key, out value);
+                Tags?.TryGetValue(key, out value);
                 return value;
             }
         }

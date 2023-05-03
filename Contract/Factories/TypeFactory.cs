@@ -23,7 +23,7 @@ namespace KubeMQ.Contract.Factories
 {
     internal class TypeFactory<T>:IMessageFactory<T>,IConversionPath<T>
     {
-        private static readonly Regex regMetaData = new Regex(@"^(U|C)-(.+)-((\d+\.)*(\d+))$", RegexOptions.Compiled);
+        private static readonly Regex regMetaData = new(@"^(U|C)-(.+)-((\d+\.)*(\d+))$", RegexOptions.Compiled);
 
         private readonly IGlobalMessageEncoder? globalMessageEncoder;
         private readonly IGlobalMessageEncryptor? globalMessageEncryptor;
@@ -52,10 +52,10 @@ namespace KubeMQ.Contract.Factories
             messageEncryptor = (IMessageEncryptor<T>)Activator.CreateInstance(types
                 .FirstOrDefault(type => type.GetInterfaces().Any(iface => iface==typeof(IMessageEncryptor<T>)),typeof(NonEncryptor<T>))
                 )!;
-            converters = traceConverters(typeof(T), globalMessageEncoder, globalMessageEncryptor, types,Array.Empty<object>(), Array.Empty<IConversionPath<T>>());
+            converters = TraceConverters(typeof(T), globalMessageEncoder, globalMessageEncryptor, types,Array.Empty<object>(), Array.Empty<IConversionPath<T>>());
         }
 
-        private static IEnumerable<IConversionPath<T>> traceConverters(Type destinationType, IGlobalMessageEncoder? globalMessageEncoder, IGlobalMessageEncryptor? globalMessageEncryptor, IEnumerable<Type> types,IEnumerable<object> curPath, IEnumerable<IConversionPath<T>> converters)
+        private static IEnumerable<IConversionPath<T>> TraceConverters(Type destinationType, IGlobalMessageEncoder? globalMessageEncoder, IGlobalMessageEncryptor? globalMessageEncryptor, IEnumerable<Type> types,IEnumerable<object> curPath, IEnumerable<IConversionPath<T>> converters)
         {
             var subPaths = types.Where(t => t.GetInterfaces().Any(iface => iface.IsGenericType &&
                 iface.GetGenericTypeDefinition()==typeof(IMessageConverter<,>)
@@ -66,23 +66,23 @@ namespace KubeMQ.Contract.Factories
 
             var results = converters.Concat(
                 subPaths.Select(path => (IConversionPath<T>)Activator.CreateInstance(typeof(ConversionPath<,>).MakeGenericType(new Type[] {
-                    extractGenericArguements(path.First().GetType())[0],
+                    ExtractGenericArguements(path.First().GetType())[0],
                     typeof(T)
                 }), path,types,globalMessageEncoder,globalMessageEncryptor)!)
             );
 
             foreach (var path in subPaths)
-                results = traceConverters(extractGenericArguements(path.First().GetType())[0], globalMessageEncoder, globalMessageEncryptor, types, path, results);
+                results = TraceConverters(ExtractGenericArguements(path.First().GetType())[0], globalMessageEncoder, globalMessageEncryptor, types, path, results);
 
             return results;
         }
 
-        private static Type[] extractGenericArguements(Type t)
+        private static Type[] ExtractGenericArguements(Type t)
         {
             return t.GetInterfaces().First(iface => iface.IsGenericType && iface.GetGenericTypeDefinition()==typeof(IMessageConverter<,>)).GetGenericArguments();
         }
 
-        private static bool isMessageTypeMatch(string metaData, Type t, out bool isCompressed)
+        private static bool IsMessageTypeMatch(string metaData, Type t, out bool isCompressed)
         {
             isCompressed=false;
             var match = regMetaData.Match(metaData);
@@ -99,19 +99,18 @@ namespace KubeMQ.Contract.Factories
             return false;
         }
 
-        private T convertData(ILogProvider logProvider, string metaData, ByteString body, MapField<string, string>? tags)
+        private T ConvertData(ILogProvider logProvider, string metaData, ByteString body, MapField<string, string>? tags)
         {
             if (metaData==null)
                 throw new ArgumentNullException(nameof(metaData));
-            bool compressed = false;
             IConversionPath<T>? converter = null;
-            if (isMessageTypeMatch(metaData, typeof(T), out compressed))
+            if (IsMessageTypeMatch(metaData, typeof(T), out bool compressed))
                 converter = this;
             else
             {
                 foreach (var conv in converters)
                 {
-                    if (isMessageTypeMatch(metaData, conv.GetType().GetGenericArguments()[0], out compressed))
+                    if (IsMessageTypeMatch(metaData, conv.GetType().GetGenericArguments()[0], out compressed))
                     {
                         converter=conv;
                         break;
@@ -127,13 +126,13 @@ namespace KubeMQ.Contract.Factories
             return result;
         }
 
-        private Interfaces.IMessage<T> convertMessage(ILogProvider logProvider, string metaData, ByteString body, MapField<string, string>? tags)
+        private Interfaces.IMessage<T> ConvertMessage(ILogProvider logProvider, string metaData, ByteString body, MapField<string, string>? tags)
         {
             try
             {
                 return new Message<T>()
                 {
-                    Data=convertData(logProvider, metaData, body, tags),
+                    Data=ConvertData(logProvider, metaData, body, tags),
                     Tags=tags
                 };
             }catch (Exception e)
@@ -157,9 +156,9 @@ namespace KubeMQ.Contract.Factories
                 return messageEncoder.Decode(stream);
         }
 
-        private IKubeMessage produceBaseMessage(T message, ConnectionOptions connectionOptions, string? channel, Dictionary<string, string>? tagCollection)
+        private IKubeMessage ProduceBaseMessage(T message, ConnectionOptions connectionOptions, string? channel, Dictionary<string, string>? tagCollection)
         {
-            channel = channel ?? messageChannel;
+            channel ??= messageChannel;
             if (string.IsNullOrEmpty(channel))
                 throw new ArgumentNullException(nameof(Channel), "message must have a channel value");
 
@@ -175,14 +174,12 @@ namespace KubeMQ.Contract.Factories
             var metaData = string.Empty;
             if (body.Length>connectionOptions.MaxBodySize)
             {
-                using (var ms = new MemoryStream())
-                {
-                    var zip = new GZipStream(ms, System.IO.Compression.CompressionLevel.SmallestSize, false);
-                    zip.Write(body, 0, body.Length);
-                    zip.Flush();
-                    body = ms.ToArray();
-                    metaData = "C";
-                }
+                using var ms = new MemoryStream();
+                var zip = new GZipStream(ms, System.IO.Compression.CompressionLevel.SmallestSize, false);
+                zip.Write(body, 0, body.Length);
+                zip.Flush();
+                body = ms.ToArray();
+                metaData = "C";
             }
             else
                 metaData="U";
@@ -220,16 +217,16 @@ namespace KubeMQ.Contract.Factories
 
             if (policy!=null)
             {
-                expirationSeconds = expirationSeconds ?? policy.ExpirationSeconds;
-                maxCount=maxCount??policy.MaxCount;
-                maxCountChannel=maxCountChannel??policy.MaxCountChannel;
+                expirationSeconds ??= policy.ExpirationSeconds;
+                maxCount ??= policy.MaxCount;
+                maxCountChannel ??= policy.MaxCountChannel;
             }
 
             if ((maxCount!=null && maxCountChannel==null)
                 ||(maxCount==null&&maxCountChannel!=null))
-                throw new ArgumentOutOfRangeException("You must specify both the maxRecieveCount and maxRecieveQueue if you are specifying either");
+                throw new ArgumentOutOfRangeException(nameof(maxCountChannel),$"You must specify both the {nameof(maxCount)} and {nameof(maxCountChannel)} if you are specifying either");
 
-            return new KubeEnqueue(produceBaseMessage(message, connectionOptions, channel, tagCollection)){
+            return new KubeEnqueue(ProduceBaseMessage(message, connectionOptions, channel, tagCollection)){
                 DelaySeconds=delaySeconds,
                 ExpirationSeconds=expirationSeconds,
                 MaxSize=maxCount,
@@ -243,19 +240,19 @@ namespace KubeMQ.Contract.Factories
 
             if (policy!=null)
             {
-                expirationSeconds = expirationSeconds ?? policy.ExpirationSeconds;
-                maxCount=maxCount??policy.MaxCount;
-                maxCountChannel=maxCountChannel??policy.MaxCountChannel;
+                expirationSeconds ??= policy.ExpirationSeconds;
+                maxCount ??= policy.MaxCount;
+                maxCountChannel ??= policy.MaxCountChannel;
             }
 
             if ((maxCount!=null && maxCountChannel==null)
                 ||(maxCount==null&&maxCountChannel!=null))
-                throw new ArgumentOutOfRangeException("You must specify both the maxRecieveCount and maxRecieveQueue if you are specifying either");
+                throw new ArgumentOutOfRangeException(nameof(maxCountChannel), $"You must specify both the {nameof(maxCount)} and {nameof(maxCountChannel)} if you are specifying either");
 
             return new KubeBatchEnqueue(){
                 Messages=messages.Select(message =>
                 {
-                    var msg = new KubeEnqueue(produceBaseMessage(message, connectionOptions, channel, tagCollection))
+                    var msg = new KubeEnqueue(ProduceBaseMessage(message, connectionOptions, channel, tagCollection))
                     {
                         DelaySeconds=delaySeconds,
                         ExpirationSeconds=expirationSeconds,
@@ -278,7 +275,7 @@ namespace KubeMQ.Contract.Factories
 
         IKubeEvent IMessageFactory<T>.Event(T message, ConnectionOptions connectionOptions, string? channel, Dictionary<string, string>? tagCollection)
         {
-            return new KubeEvent(produceBaseMessage(message, connectionOptions, channel, tagCollection))
+            return new KubeEvent(ProduceBaseMessage(message, connectionOptions, channel, tagCollection))
             {
                 Stored=stored
             };
@@ -286,10 +283,10 @@ namespace KubeMQ.Contract.Factories
 
         IKubeRequest IMessageFactory<T>.Request<R>(T message, ConnectionOptions connectionOptions, string? channel, Dictionary<string, string>? tagCollection, int? timeout, RPCType? type)
         {
-            type = type??rpcType;
+            type ??= rpcType;
             if (type==null)
                 throw new ArgumentNullException(nameof(type), "message must have an RPC type value");
-            return new KubeRequest(produceBaseMessage(message, connectionOptions, channel, tagCollection))
+            return new KubeRequest(ProduceBaseMessage(message, connectionOptions, channel, tagCollection))
             {
                 Timeout=timeout??requestTimeout,
                 CommandType=(RequestType)(int)type.Value
@@ -298,24 +295,24 @@ namespace KubeMQ.Contract.Factories
 
         IKubeMessage IMessageFactory<T>.Response(T message, ConnectionOptions connectionOptions, string responseChannel, Dictionary<string, string>? tagCollection)
         {
-            return produceBaseMessage(message, connectionOptions, responseChannel, tagCollection);
+            return ProduceBaseMessage(message, connectionOptions, responseChannel, tagCollection);
         }
 
         Interfaces.IMessage<T> IMessageFactory<T>.ConvertMessage(ILogProvider logProvider, QueueMessage msg)
-            => convertMessage(logProvider, msg.Metadata, msg.Body, msg.Tags);
+            => ConvertMessage(logProvider, msg.Metadata, msg.Body, msg.Tags);
 
         Interfaces.IMessage<T> IMessageFactory<T>.ConvertMessage(ILogProvider logProvider, Request msg)
-            => convertMessage(logProvider, msg.Metadata, msg.Body, msg.Tags);
+            => ConvertMessage(logProvider, msg.Metadata, msg.Body, msg.Tags);
 
         Interfaces.IMessage<T> IMessageFactory<T>.ConvertMessage(ILogProvider logProvider, EventReceive msg)
-            => convertMessage(logProvider, msg.Metadata, msg.Body, msg.Tags);
+            => ConvertMessage(logProvider, msg.Metadata, msg.Body, msg.Tags);
         IResultMessage<T> IMessageFactory<T>.ConvertMessage(ILogProvider logProvider, Response msg)
         {
             try
             {
                 return new ResultMessage<T>()
                 {
-                    Response=convertData(logProvider, msg.Metadata, msg.Body, msg.Tags),
+                    Response=ConvertData(logProvider, msg.Metadata, msg.Body, msg.Tags),
                     Tags=msg.Tags
                 };
             }
