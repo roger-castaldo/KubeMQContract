@@ -35,5 +35,6 @@
 	    <RepositoryType>git</RepositoryType>
 	    <PackageReadmeFile>README.md</PackageReadmeFile>
 	    <Title>KubeMQ Contract</Title>
+	    <PackageId>KubeMQContract</PackageId>
     </PropertyGroup>
 </Project>
