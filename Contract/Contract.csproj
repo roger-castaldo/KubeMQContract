@@ -9,6 +9,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Google.Protobuf" Version="3.22.1" />
     <PackageReference Include="Grpc.Core" Version="2.46.6" />
     <PackageReference Include="Grpc.Net.Client" Version="2.52.0" />
@@ -18,5 +29,11 @@
     <PropertyGroup>
 	    <IncludeSymbols>true</IncludeSymbols>
 	    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+	    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+	    <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+	    <RepositoryUrl>https://github.com/roger-castaldo/KubeMQContract</RepositoryUrl>
+	    <RepositoryType>git</RepositoryType>
+	    <PackageReadmeFile>README.md</PackageReadmeFile>
+	    <Title>KubeMQ Contract</Title>
     </PropertyGroup>
 </Project>
