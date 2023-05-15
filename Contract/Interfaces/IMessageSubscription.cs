@@ -9,6 +9,7 @@ namespace KubeMQ.Contract.Interfaces
     internal interface IMessageSubscription
     {
         Guid ID { get; }
+        Task Start();
         void Stop();
     }
 }
