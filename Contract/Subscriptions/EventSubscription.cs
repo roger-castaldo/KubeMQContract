@@ -22,14 +22,14 @@ namespace KubeMQ.Contract.Subscriptions
         private readonly kubemq.kubemqClient client;
         private readonly ConnectionOptions options;
         private readonly Action<IMessage<T>> messageRecieved;
-        private readonly Action<string> errorRecieved;
+        private readonly Action<Exception> errorRecieved;
         private readonly CancellationTokenSource cancellationToken;
         private readonly long storageOffset;
         private readonly Subscribe.Types.EventsStoreType eventsStoreStyle;
         private bool active = true;
         private readonly ILogProvider logProvider;
 
-        public EventSubscription(IMessageFactory<T> messageFactory, KubeSubscription<T> subscription, kubemq.kubemqClient client, ConnectionOptions options, Action<IMessage<T>> messageRecieved, Action<string> errorRecieved, long storageOffset, ILogProvider logProvider, MessageReadStyle? messageReadStyle, CancellationToken cancellationToken)
+        public EventSubscription(IMessageFactory<T> messageFactory, KubeSubscription<T> subscription, kubemq.kubemqClient client, ConnectionOptions options, Action<IMessage<T>> messageRecieved, Action<Exception> errorRecieved, long storageOffset, ILogProvider logProvider, MessageReadStyle? messageReadStyle, CancellationToken cancellationToken)
         {
             messageReadStyle ??= typeof(T).GetCustomAttributes<StoredMessage>().Select(sm => sm.Style).FirstOrDefault();
             this.messageFactory=messageFactory;
@@ -90,7 +90,7 @@ namespace KubeMQ.Contract.Subscriptions
                             catch (Exception e)
                             {
                                 logProvider.LogError("Message {} failed on subscription {}.  Message:{}", evnt.EventID, ID, e.Message);
-                                errorRecieved(e.Message);
+                                errorRecieved(e);
                             }
                         }
                     }
@@ -104,13 +104,13 @@ namespace KubeMQ.Contract.Subscriptions
                     else
                     {
                         logProvider.LogError("RPC Error recieved on subscription {}.  StatusCode:{},Message:{}", ID, rpcx.StatusCode, rpcx.Message);
-                        errorRecieved(rpcx.Message);
+                        errorRecieved(rpcx);
                     }
                 }
                 catch (Exception e)
                 {
                     logProvider.LogError("Error recieved on subscription {}.  Message:{}", ID, e.Message);
-                    errorRecieved(e.Message);
+                    errorRecieved(e);
                 }
 
                 await Task.Delay(options.ReconnectInterval);

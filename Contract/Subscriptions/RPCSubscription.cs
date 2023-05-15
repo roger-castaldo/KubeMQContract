@@ -23,13 +23,13 @@ namespace KubeMQ.Contract.Subscriptions
         private readonly kubemq.kubemqClient client;
         private readonly ConnectionOptions connectionOptions;
         private readonly Func<IMessage<T>, TaggedResponse<R>> processMessage;
-        private readonly Action<string> errorRecieved;
+        private readonly Action<Exception> errorRecieved;
         private readonly CancellationTokenSource cancellationToken;
         private readonly RPCType commandType;
         private readonly ILogProvider logProvider;
         private bool active = true;
 
-        public RPCSubscription(IMessageFactory<T> incomingFactory, IMessageFactory<R> outgoingFactory, KubeSubscription<T> subscription, kubemq.kubemqClient client, ConnectionOptions connectionOptions, Func<IMessage<T>, TaggedResponse<R>> processMessage, Action<string> errorRecieved, ILogProvider logProvider, RPCType? commandType, CancellationToken cancellationToken)
+        public RPCSubscription(IMessageFactory<T> incomingFactory, IMessageFactory<R> outgoingFactory, KubeSubscription<T> subscription, kubemq.kubemqClient client, ConnectionOptions connectionOptions, Func<IMessage<T>, TaggedResponse<R>> processMessage, Action<Exception> errorRecieved, ILogProvider logProvider, RPCType? commandType, CancellationToken cancellationToken)
         {
             this.incomingFactory=incomingFactory;
             this.outgoingFactory=outgoingFactory;
@@ -130,13 +130,13 @@ namespace KubeMQ.Contract.Subscriptions
                     else
                     {
                         logProvider.LogError("RPC Error recieved on RPC subscription {}.  StatusCode:{},Message:{}", ID, rpcx.StatusCode, rpcx.Message);
-                        errorRecieved(rpcx.Message);
+                        errorRecieved(rpcx);
                     }
                 }
                 catch (Exception e)
                 {
                     logProvider.LogError("Error recieved on RPC subscription {}.  Message:{}", ID, e.Message);
-                    errorRecieved(e.Message);
+                    errorRecieved(e);
                 }
 
                 await Task.Delay(connectionOptions.ReconnectInterval);
