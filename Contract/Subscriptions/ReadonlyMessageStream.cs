@@ -5,13 +5,13 @@ using System.Threading.Channels;
 
 namespace KubeMQ.Contract.Subscriptions
 {
-    internal class MessageStream<T> : IMessageStream<T>, IMessageSubscription
+    internal class ReadonlyMessageStream<T> : IReadonlyMessageStream<T>, IMessageSubscription
     {
         public Guid ID => Guid.NewGuid();
         private readonly EventSubscription<T> _subscription;
         private readonly Channel<IMessage<T>> _channel;
 
-        public MessageStream(IMessageFactory<T> messageFactory, KubeSubscription<T> subscription, kubemq.kubemqClient client, ConnectionOptions options, Action<Exception> errorRecieved, long storageOffset, ILogProvider logProvider, MessageReadStyle? messageReadStyle, CancellationToken cancellationToken)
+        public ReadonlyMessageStream(IMessageFactory<T> messageFactory, KubeSubscription<T> subscription, kubemq.kubemqClient client, ConnectionOptions options, Action<Exception> errorRecieved, long storageOffset, ILogProvider logProvider, MessageReadStyle? messageReadStyle, CancellationToken cancellationToken)
         {
             _channel = Channel.CreateUnbounded<IMessage<T>>(new UnboundedChannelOptions()
             {

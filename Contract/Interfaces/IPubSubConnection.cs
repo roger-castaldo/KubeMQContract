@@ -21,6 +21,7 @@ namespace KubeMQ.Contract.Interfaces
         /// <param name="tagCollection">A set of key value pairs to me transmitted as headers attached to the message</param>
         /// <returns>A transmission result indicating the message id and or errors if an error occured</returns>
         Task<ITransmissionResult> Send<T>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, Dictionary<string, string>? tagCollection = null);
+
         /// <summary>
         /// Called to create a subscription to a Pub/Sub style Event channel
         /// </summary>
@@ -35,13 +36,6 @@ namespace KubeMQ.Contract.Interfaces
         /// <returns>A unique ID for this particular subscription that can be used to Unsubscribe</returns>
         Guid Subscribe<T>(
             Action<IMessage<T>> messageRecieved,
-            Action<Exception> errorRecieved,
-            CancellationToken cancellationToken = new CancellationToken(),
-            string? channel = null,
-            string group = "",
-            long storageOffset = 0,
-            MessageReadStyle? messageReadStyle = null);
-        IMessageStream<T> SubscribeToStream<T>(
             Action<Exception> errorRecieved,
             CancellationToken cancellationToken = new CancellationToken(),
             string? channel = null,

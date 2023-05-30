@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace KubeMQ.Contract.Interfaces
 {
-    public interface IMessageStream<T> : IAsyncEnumerable<IMessage<T>>,IDisposable
+    public interface IReadonlyMessageStream<T> : IAsyncEnumerable<IMessage<T>>,IDisposable
     {
     }
 }

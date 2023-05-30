@@ -11,7 +11,7 @@ namespace KubeMQ.Contract.Interfaces
     /// <summary>
     /// The main component of this library.  Houses a connection to a KubeMQ host and is used to Send and Recieve messages
     /// </summary>
-    public interface IConnection : IPubSubConnection,IQueueConnection,IRPCConnection
+    public interface IConnection : IPubSubConnection, IPubSubStreamConnection, IQueueConnection,IRPCConnection
     {
     }
 }

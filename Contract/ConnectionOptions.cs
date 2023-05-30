@@ -103,6 +103,19 @@ namespace KubeMQ.Contract
         }
 
         /// <summary>
+        /// Called to use the Current Options to establish a Pub/Sub Stream connection to the KubeMQ server.
+        /// </summary>
+        /// <param name="globalMessageEncoder">If desired, an encoder can be specified here and will be used to encode message bodies as the default.  
+        /// A type specific encoder can be specified to override this for that particular type of message.</param>
+        /// <param name="globalMessageEncryptor">If desired, an encryptor can be specified here and will be used to secure the message bodies as the default.  
+        /// A type specific encryptor can be specified to override this for that particular type of message.</param>
+        /// <returns></returns>
+        public IPubSubStreamConnection EstablishPubSubStreamConnection(IGlobalMessageEncoder? globalMessageEncoder = null, IGlobalMessageEncryptor? globalMessageEncryptor = null)
+        {
+            return new Connection(this, globalMessageEncoder, globalMessageEncryptor);
+        }
+
+        /// <summary>
         /// Called to use the Current Options to establish a RPC connection to the KubeMQ server.
         /// </summary>
         /// <param name="globalMessageEncoder">If desired, an encoder can be specified here and will be used to encode message bodies as the default.  
