@@ -172,7 +172,7 @@ namespace KubeMQ.Contract.Factories
                 body = messageEncryptor.Encrypt(body, out messageHeader);
 
             var metaData = string.Empty;
-            if (body.Length>connectionOptions.MaxBodySize)
+            if (body.Length>(connectionOptions.MaxBodySize==0?int.MaxValue : connectionOptions.MaxBodySize))
             {
                 using var ms = new MemoryStream();
                 var zip = new GZipStream(ms, System.IO.Compression.CompressionLevel.SmallestSize, false);
@@ -197,7 +197,7 @@ namespace KubeMQ.Contract.Factories
                     tags.Add(tag.Key, tag.Value);
             }
 
-            if (body.Length > connectionOptions.MaxBodySize)
+            if (body.Length > (connectionOptions.MaxBodySize==0 ? int.MaxValue : connectionOptions.MaxBodySize))
                 throw new ArgumentOutOfRangeException(nameof(message), "message data exceeds maxmium message size");
 
 

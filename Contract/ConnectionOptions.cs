@@ -46,7 +46,7 @@ namespace KubeMQ.Contract
         /// If the encoded message exceeds the size, it will zip it in an attempt to transmit the 
         /// message.  If it still fails in size, an exception will be thrown.
         /// </summary>
-        public int MaxBodySize { get; init; } = 4096;
+        public int MaxBodySize { get; init; } = 0;
         /// <summary>
         /// The ILogger instance to use for logging against any connections produced by these options.
         /// </summary>

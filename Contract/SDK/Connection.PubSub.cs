@@ -73,5 +73,19 @@ namespace KubeMQ.Contract.SDK
             }
             return sub.ID;
         }
+
+        public IMessageStream<T> SubscribeToStream<T>(Action<Exception> errorRecieved, CancellationToken cancellationToken = default, string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null)
+        {
+            var stream = new MessageStream<T>(GetMessageFactory<T>(), new KubeSubscription<T>(this.connectionOptions, channel: channel, group: group), this.client, this.connectionOptions, errorRecieved, storageOffset, this, messageReadStyle, cancellationToken);
+            Log(LogLevel.Information, "Requesting MessageStream {} of type {}", stream.ID, typeof(T).Name);
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            stream.Start();
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            lock (subscriptions)
+            {
+                subscriptions.Add(stream);
+            }
+            return stream;
+        }
     }
 }

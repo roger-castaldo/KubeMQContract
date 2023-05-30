@@ -41,5 +41,12 @@ namespace KubeMQ.Contract.Interfaces
             string group = "",
             long storageOffset = 0,
             MessageReadStyle? messageReadStyle = null);
+        IMessageStream<T> SubscribeToStream<T>(
+            Action<Exception> errorRecieved,
+            CancellationToken cancellationToken = new CancellationToken(),
+            string? channel = null,
+            string group = "",
+            long storageOffset = 0,
+            MessageReadStyle? messageReadStyle = null);
     }
 }
