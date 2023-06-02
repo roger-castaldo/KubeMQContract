@@ -2,10 +2,11 @@
 using KubeMQ.Contract.SDK.Grpc;
 using KubeMQ.Contract.SDK;
 using System.Threading.Channels;
+using KubeMQ.Contract.Interfaces.Messages;
 
 namespace KubeMQ.Contract.Subscriptions
 {
-    internal class ReadonlyMessageStream<T> : IReadonlyMessageStream<T>, IMessageSubscription
+    internal class ReadonlyMessageStream<T> : MessageStream,IReadonlyMessageStream<T>, IMessageSubscription
     {
         public Guid ID => Guid.NewGuid();
         private readonly EventSubscription<T> _subscription;
@@ -13,17 +14,23 @@ namespace KubeMQ.Contract.Subscriptions
 
         public ReadonlyMessageStream(IMessageFactory<T> messageFactory, KubeSubscription<T> subscription, kubemq.kubemqClient client, ConnectionOptions options, Action<Exception> errorRecieved, long storageOffset, ILogProvider logProvider, MessageReadStyle? messageReadStyle, CancellationToken cancellationToken)
         {
+            cancellationToken.Register(() => { Stop(); });
             _channel = Channel.CreateUnbounded<IMessage<T>>(new UnboundedChannelOptions()
             {
                 SingleReader=true,
                 SingleWriter=true
             });
-            _subscription = new EventSubscription<T>(messageFactory, subscription, client, options, (message) => {
-                _channel.Writer.WriteAsync(message);
-            }, errorRecieved, storageOffset, logProvider, messageReadStyle, cancellationToken);
+            _subscription = new EventSubscription<T>(messageFactory, subscription, client, options,async (message) => {
+                success++;
+                await _channel.Writer.WriteAsync(message);
+            }, err =>
+            {
+                errors++;
+                errorRecieved(err);
+            }, storageOffset, logProvider, messageReadStyle, cancellationToken);
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             try
             {
@@ -34,7 +41,8 @@ namespace KubeMQ.Contract.Subscriptions
             {
                 _channel.Writer.Complete();
             } catch (Exception) { }
-            if (_channel.Reader.TryPeek(out IMessage<T> item))
+            base.Dispose();
+            if (_channel.Reader.TryPeek(out _))
                 throw new ArgumentOutOfRangeException("Items", "There are unprocessed items in the stream.");
         }
 

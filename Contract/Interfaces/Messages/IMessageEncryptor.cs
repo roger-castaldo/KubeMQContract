@@ -1,4 +1,4 @@
-﻿namespace KubeMQ.Contract.Interfaces
+﻿namespace KubeMQ.Contract.Interfaces.Messages
 {
     /// <summary>
     /// Used to define a specific message encryptor for the type T.  

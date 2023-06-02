@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KubeMQ.Contract.Interfaces
+namespace KubeMQ.Contract.Interfaces.Messages
 {
     /// <summary>
     /// Houses the headers that were supplied by the respective KubeMQ message (tags)

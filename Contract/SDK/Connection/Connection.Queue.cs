@@ -1,6 +1,8 @@
 ﻿using Google.Protobuf;
 using Grpc.Core;
 using KubeMQ.Contract.Interfaces;
+using KubeMQ.Contract.Interfaces.Connections;
+using KubeMQ.Contract.Interfaces.Messages;
 using KubeMQ.Contract.Messages;
 using KubeMQ.Contract.SDK.Grpc;
 using KubeMQ.Contract.Subscriptions;
@@ -11,7 +13,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KubeMQ.Contract.SDK
+namespace KubeMQ.Contract.SDK.Connection
 {
     internal partial class Connection : IQueueConnection
     {

@@ -1,13 +1,10 @@
 ﻿using KubeMQ.Contract.Interfaces;
+using KubeMQ.Contract.Interfaces.Connections;
+using KubeMQ.Contract.Interfaces.Messages;
 using KubeMQ.Contract.Subscriptions;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace KubeMQ.Contract.SDK
+namespace KubeMQ.Contract.SDK.Connection
 {
     internal partial class Connection : IPubSubStreamConnection
     {
@@ -15,9 +12,7 @@ namespace KubeMQ.Contract.SDK
         {
             var stream = new ReadonlyMessageStream<T>(GetMessageFactory<T>(), new KubeSubscription<T>(this.connectionOptions, channel: channel, group: group), this.client, this.connectionOptions, errorRecieved, storageOffset, this, messageReadStyle, cancellationToken);
             Log(LogLevel.Information, "Requesting MessageStream {} of type {}", stream.ID, typeof(T).Name);
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             stream.Start();
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             lock (subscriptions)
             {
                 subscriptions.Add(stream);

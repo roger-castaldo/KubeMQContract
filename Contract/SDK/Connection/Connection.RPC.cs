@@ -1,6 +1,7 @@
 ﻿using Google.Protobuf;
 using Grpc.Core;
 using KubeMQ.Contract.Interfaces;
+using KubeMQ.Contract.Interfaces.Connections;
 using KubeMQ.Contract.Messages;
 using KubeMQ.Contract.SDK.Grpc;
 using KubeMQ.Contract.Subscriptions;
@@ -11,11 +12,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KubeMQ.Contract.SDK
+namespace KubeMQ.Contract.SDK.Connection
 {
     internal partial class Connection : IRPCConnection
     {
-        public async Task<Contract.Interfaces.IResultMessage<R>> SendRPC<T, R>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, Dictionary<string, string>? tagCollection = null, int? timeout = null, RPCType? type = null)
+        public async Task<Contract.Interfaces.Messages.IResultMessage<R>> SendRPC<T, R>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, Dictionary<string, string>? tagCollection = null, int? timeout = null, RPCType? type = null)
         {
             try
             {
@@ -71,7 +72,7 @@ namespace KubeMQ.Contract.SDK
         }
 
         public Guid SubscribeRPC<T, R>(
-            Func<Contract.Interfaces.IMessage<T>, TaggedResponse<R>> processMessage,
+            Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<R>> processMessage,
             Action<Exception> errorRecieved,
             CancellationToken cancellationToken = new CancellationToken(),
             string? channel = null,

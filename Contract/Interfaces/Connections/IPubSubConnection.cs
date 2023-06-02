@@ -1,10 +1,11 @@
-﻿using System;
+﻿using KubeMQ.Contract.Interfaces.Messages;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KubeMQ.Contract.Interfaces
+namespace KubeMQ.Contract.Interfaces.Connections
 {
     /// <summary>
     /// Houses a Pub/Sub connection to a KubeMQ host and is used to Send and Recieve messages

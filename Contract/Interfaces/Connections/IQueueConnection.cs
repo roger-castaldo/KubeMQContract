@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using KubeMQ.Contract.Interfaces.Messages;
 
-namespace KubeMQ.Contract.Interfaces
+namespace KubeMQ.Contract.Interfaces.Connections
 {
     /// <summary>
     /// Houses a Queue connection to a KubeMQ host and is used to Send and Recieve messages

@@ -2,12 +2,14 @@
 using Grpc.Core;
 using KubeMQ.Contract.Factories;
 using KubeMQ.Contract.Interfaces;
+using KubeMQ.Contract.Interfaces.Connections;
+using KubeMQ.Contract.Interfaces.Messages;
 using KubeMQ.Contract.Messages;
 using KubeMQ.Contract.SDK.Grpc;
 using KubeMQ.Contract.Subscriptions;
 using Microsoft.Extensions.Logging;
 
-namespace KubeMQ.Contract.SDK
+namespace KubeMQ.Contract.SDK.Connection
 {
     internal partial class Connection : IConnection, IDisposable
     {

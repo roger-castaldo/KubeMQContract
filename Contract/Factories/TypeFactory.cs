@@ -3,20 +3,16 @@ using Google.Protobuf.Collections;
 using Grpc.Core;
 using KubeMQ.Contract.Attributes;
 using KubeMQ.Contract.Interfaces;
+using KubeMQ.Contract.Interfaces.Conversion;
+using KubeMQ.Contract.Interfaces.Messages;
 using KubeMQ.Contract.Messages;
 using KubeMQ.Contract.SDK.Grpc;
 using KubeMQ.Contract.SDK.Interfaces;
 using KubeMQ.Contract.SDK.Messages;
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using static KubeMQ.Contract.SDK.Grpc.Request.Types;
 
 namespace KubeMQ.Contract.Factories
@@ -126,7 +122,7 @@ namespace KubeMQ.Contract.Factories
             return result;
         }
 
-        private Interfaces.IMessage<T> ConvertMessage(ILogProvider logProvider, string metaData, ByteString body, MapField<string, string>? tags)
+        private Interfaces.Messages.IMessage<T> ConvertMessage(ILogProvider logProvider, string metaData, ByteString body, MapField<string, string>? tags)
         {
             try
             {
@@ -298,13 +294,13 @@ namespace KubeMQ.Contract.Factories
             return ProduceBaseMessage(message, connectionOptions, responseChannel, tagCollection);
         }
 
-        Interfaces.IMessage<T> IMessageFactory<T>.ConvertMessage(ILogProvider logProvider, QueueMessage msg)
+        Interfaces.Messages.IMessage<T> IMessageFactory<T>.ConvertMessage(ILogProvider logProvider, QueueMessage msg)
             => ConvertMessage(logProvider, msg.Metadata, msg.Body, msg.Tags);
 
-        Interfaces.IMessage<T> IMessageFactory<T>.ConvertMessage(ILogProvider logProvider, Request msg)
+        Interfaces.Messages.IMessage<T> IMessageFactory<T>.ConvertMessage(ILogProvider logProvider, Request msg)
             => ConvertMessage(logProvider, msg.Metadata, msg.Body, msg.Tags);
 
-        Interfaces.IMessage<T> IMessageFactory<T>.ConvertMessage(ILogProvider logProvider, EventReceive msg)
+        Interfaces.Messages.IMessage<T> IMessageFactory<T>.ConvertMessage(ILogProvider logProvider, EventReceive msg)
             => ConvertMessage(logProvider, msg.Metadata, msg.Body, msg.Tags);
         IResultMessage<T> IMessageFactory<T>.ConvertMessage(ILogProvider logProvider, Response msg)
         {

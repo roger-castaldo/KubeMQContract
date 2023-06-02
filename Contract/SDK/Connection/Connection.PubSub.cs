@@ -1,6 +1,7 @@
 ﻿using Google.Protobuf;
 using Grpc.Core;
 using KubeMQ.Contract.Interfaces;
+using KubeMQ.Contract.Interfaces.Connections;
 using KubeMQ.Contract.Messages;
 using KubeMQ.Contract.SDK.Grpc;
 using KubeMQ.Contract.Subscriptions;
@@ -11,7 +12,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KubeMQ.Contract.SDK
+namespace KubeMQ.Contract.SDK.Connection
 {
     internal partial class Connection : IPubSubConnection
     {
@@ -60,7 +61,7 @@ namespace KubeMQ.Contract.SDK
             }
         }
 
-        public Guid Subscribe<T>(Action<Contract.Interfaces.IMessage<T>> messageRecieved, Action<Exception> errorRecieved, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null)
+        public Guid Subscribe<T>(Action<Contract.Interfaces.Messages.IMessage<T>> messageRecieved, Action<Exception> errorRecieved, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null)
         {
             var sub = new EventSubscription<T>(GetMessageFactory<T>(), new KubeSubscription<T>(this.connectionOptions, channel: channel, group: group), this.client, this.connectionOptions, messageRecieved, errorRecieved, storageOffset, this, messageReadStyle, cancellationToken);
             Log(LogLevel.Information, "Requesting Subscribe {} of type {}", sub.ID, typeof(T).Name);

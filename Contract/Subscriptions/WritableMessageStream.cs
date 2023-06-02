@@ -1,4 +1,6 @@
 ﻿using KubeMQ.Contract.Interfaces;
+using KubeMQ.Contract.Interfaces.Connections;
+using KubeMQ.Contract.Interfaces.Messages;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,38 +9,19 @@ using System.Threading.Tasks;
 
 namespace KubeMQ.Contract.Subscriptions
 {
-    internal class WritableMessageStream<T> : IWritableMessageStream<T>
+    internal class WritableMessageStream<T> : MessageStream,IWritableMessageStream<T>
     {
-        private class StreamStats : IStreamStats
-        {
-            public long Errors { get; init; }
-            public long Success { get; init; }
-        }
-
         private readonly IPubSubConnection connection;
-        private readonly string channel;
-        private long success=0;
-        private long errors=0;
+        private readonly string? channel;
+        
 
-        public WritableMessageStream(IPubSubConnection connection, string channel)
+        public WritableMessageStream(IPubSubConnection connection, string? channel)
         {
             this.connection=connection;
             this.channel=channel;
         }
 
-        public long Length => success+errors;
-
-        public IStreamStats Stats => new StreamStats()
-        {
-            Errors=errors,
-            Success=success
-        };
-
-        public void Dispose()
-        {
-            errors=0; 
-            success=0;    
-        }
+        
 
         public async Task<ITransmissionResult> Write(T message, CancellationToken cancellationToken = default, Dictionary<string, string>? tagCollection = null)
         {

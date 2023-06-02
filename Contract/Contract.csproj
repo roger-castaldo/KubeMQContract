@@ -24,6 +24,11 @@
     <PackageReference Include="Grpc.Core" Version="2.46.6" />
     <PackageReference Include="Grpc.Net.Client" Version="2.52.0" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Interfaces\Conversion\" />
+    <Folder Include="SDK\Connection\" />
+  </ItemGroup>
 	
 	
     <PropertyGroup>

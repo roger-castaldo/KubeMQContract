@@ -1,5 +1,6 @@
 ﻿using Google.Protobuf.Collections;
 using KubeMQ.Contract.Interfaces;
+using KubeMQ.Contract.Interfaces.Messages;
 using System;
 using System.Collections.Generic;
 using System.Linq;
