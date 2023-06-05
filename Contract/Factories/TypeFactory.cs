@@ -122,20 +122,25 @@ namespace KubeMQ.Contract.Factories
             return result;
         }
 
-        private Interfaces.Messages.IMessage<T> ConvertMessage(ILogProvider logProvider, string metaData, ByteString body, MapField<string, string>? tags)
+        private Interfaces.Messages.IMessage<T> ConvertMessage(ILogProvider logProvider, string metaData, ByteString body, MapField<string, string>? tags,string id,DateTime timestamp)
         {
             try
             {
                 return new Message<T>()
                 {
                     Data=ConvertData(logProvider, metaData, body, tags),
-                    Tags=tags
+                    Tags=tags,
+                    ID=id,
+                    Timestamp=timestamp
                 };
             }catch (Exception e)
             {
                 return new Message<T>()
                 {
-                    Error=e.Message
+                    Error=e.Message,
+                    Tags=tags,
+                    ID=id,
+                    Timestamp=timestamp
                 };
             }
         }
@@ -295,13 +300,13 @@ namespace KubeMQ.Contract.Factories
         }
 
         Interfaces.Messages.IMessage<T> IMessageFactory<T>.ConvertMessage(ILogProvider logProvider, QueueMessage msg)
-            => ConvertMessage(logProvider, msg.Metadata, msg.Body, msg.Tags);
+            => ConvertMessage(logProvider, msg.Metadata, msg.Body, msg.Tags, msg.MessageID, (msg.Attributes.Timestamp==0 ? DateTime.Now : Utility.FromUnixTime(msg.Attributes.Timestamp)));
 
         Interfaces.Messages.IMessage<T> IMessageFactory<T>.ConvertMessage(ILogProvider logProvider, Request msg)
-            => ConvertMessage(logProvider, msg.Metadata, msg.Body, msg.Tags);
+            => ConvertMessage(logProvider, msg.Metadata, msg.Body, msg.Tags, msg.RequestID, DateTime.Now);
 
         Interfaces.Messages.IMessage<T> IMessageFactory<T>.ConvertMessage(ILogProvider logProvider, EventReceive msg)
-            => ConvertMessage(logProvider, msg.Metadata, msg.Body, msg.Tags);
+            => ConvertMessage(logProvider, msg.Metadata, msg.Body, msg.Tags,msg.EventID,(msg.Timestamp==0 ? DateTime.Now : Utility.FromUnixTime(msg.Timestamp)));
         IResultMessage<T> IMessageFactory<T>.ConvertMessage(ILogProvider logProvider, Response msg)
         {
             try
