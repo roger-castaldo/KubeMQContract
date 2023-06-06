@@ -44,5 +44,6 @@
 	    <AssemblyVersion>1.2.0.0</AssemblyVersion>
 	    <FileVersion>$(AssemblyVersion)</FileVersion>
 	    <Version>$(AssemblyVersion)</Version>
+	    <AssemblyName>KubeMQContract</AssemblyName>
     </PropertyGroup>
 </Project>
