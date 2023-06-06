@@ -1,10 +1,5 @@
 ﻿using Google.Protobuf.Collections;
-using KubeMQ.Contract.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using KubeMQ.Contract.Interfaces.Messages;
 
 namespace KubeMQ.Contract.Factories
 {
@@ -19,8 +14,9 @@ namespace KubeMQ.Contract.Factories
             get
             {
                 string? value = null;
-                if (Tags!=null)
-                    Tags.TryGetValue(key, out value);
+                if (Tags==null)
+                    return value;
+                Tags.TryGetValue(key, out value);
                 return value;
             }
         }

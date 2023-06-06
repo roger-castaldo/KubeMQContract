@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace KubeMQ.Contract.Interfaces
+﻿namespace KubeMQ.Contract.Interfaces.Conversion
 {
     /// <summary>
     /// Used to define a message converter.  These are called upon if a 

@@ -1,9 +1,5 @@
-﻿using KubeMQ.Contract.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using KubeMQ.Contract.Interfaces.Messages;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace KubeMQ.Contract.Factories
 {

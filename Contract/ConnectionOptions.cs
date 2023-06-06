@@ -1,6 +1,8 @@
 ﻿using Grpc.Core;
 using KubeMQ.Contract.Interfaces;
+using KubeMQ.Contract.Interfaces.Connections;
 using KubeMQ.Contract.SDK;
+using KubeMQ.Contract.SDK.Connection;
 using KubeMQ.Contract.SDK.Grpc;
 using Microsoft.Extensions.Logging;
 
@@ -46,7 +48,7 @@ namespace KubeMQ.Contract
         /// If the encoded message exceeds the size, it will zip it in an attempt to transmit the 
         /// message.  If it still fails in size, an exception will be thrown.
         /// </summary>
-        public int MaxBodySize { get; init; } = 4096;
+        public int MaxBodySize { get; init; } = 0;
         /// <summary>
         /// The ILogger instance to use for logging against any connections produced by these options.
         /// </summary>
@@ -98,6 +100,19 @@ namespace KubeMQ.Contract
         /// A type specific encryptor can be specified to override this for that particular type of message.</param>
         /// <returns></returns>
         public IPubSubConnection EstablishPubSubConnection(IGlobalMessageEncoder? globalMessageEncoder = null, IGlobalMessageEncryptor? globalMessageEncryptor = null)
+        {
+            return new Connection(this, globalMessageEncoder, globalMessageEncryptor);
+        }
+
+        /// <summary>
+        /// Called to use the Current Options to establish a Pub/Sub Stream connection to the KubeMQ server.
+        /// </summary>
+        /// <param name="globalMessageEncoder">If desired, an encoder can be specified here and will be used to encode message bodies as the default.  
+        /// A type specific encoder can be specified to override this for that particular type of message.</param>
+        /// <param name="globalMessageEncryptor">If desired, an encryptor can be specified here and will be used to secure the message bodies as the default.  
+        /// A type specific encryptor can be specified to override this for that particular type of message.</param>
+        /// <returns></returns>
+        public IPubSubStreamConnection EstablishPubSubStreamConnection(IGlobalMessageEncoder? globalMessageEncoder = null, IGlobalMessageEncryptor? globalMessageEncryptor = null)
         {
             return new Connection(this, globalMessageEncoder, globalMessageEncryptor);
         }

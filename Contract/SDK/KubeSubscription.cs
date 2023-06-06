@@ -11,10 +11,9 @@ namespace KubeMQ.Contract.SDK
 {
     internal class KubeSubscription<T>
     {
-        public string RequestID => Guid.NewGuid().ToString();
         private readonly string clientID;
         public string ClientID => clientID;
-        private string channel;
+        private readonly string channel;
         public string Channel=> channel;
         private readonly string group;
         public string Group => group;

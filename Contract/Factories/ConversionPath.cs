@@ -1,9 +1,6 @@
 ﻿using KubeMQ.Contract.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using KubeMQ.Contract.Interfaces.Conversion;
+using KubeMQ.Contract.Interfaces.Messages;
 
 namespace KubeMQ.Contract.Factories
 {
@@ -34,25 +31,22 @@ namespace KubeMQ.Contract.Factories
                 stream=globalMessageEncryptor.Decrypt(stream, messageHeader);
             else
                 stream = messageEncryptor.Decrypt(stream, messageHeader);
-            object? result = null;
+            object? result;
             if (globalMessageEncoder!=null && messageEncoder is JsonEncoder<T>)
                 result =  globalMessageEncoder.Decode<T>(stream);
             else
                 result = messageEncoder.Decode(stream);
             foreach (var converter in path)
             {
-                logProvider.LogTrace("Attempting to convert {} to {} through converters for {}", typeof(T).Name, typeof(V).Name, extractGenericArguements(converter.GetType())[0].Name);
-                result = executeConverter(converter, result, extractGenericArguements(converter.GetType())[1]);
+                logProvider.LogTrace("Attempting to convert {} to {} through converters for {}", typeof(T).Name, typeof(V).Name, ExtractGenericArguements(converter.GetType())[0].Name);
+                result = ExecuteConverter(converter, result, ExtractGenericArguements(converter.GetType())[1]);
             }
             return (V?)result;
         }
 
-        private static Type[] extractGenericArguements(Type t)
-        {
-            return t.GetInterfaces().First(iface => iface.IsGenericType && iface.GetGenericTypeDefinition()==typeof(IMessageConverter<,>)).GetGenericArguments();
-        }
+        private static Type[] ExtractGenericArguements(Type t) => t.GetInterfaces().First(iface => iface.IsGenericType && iface.GetGenericTypeDefinition()==typeof(IMessageConverter<,>)).GetGenericArguments();
 
-        private static object? executeConverter(object converter, object? source, Type destination)
+        private static object? ExecuteConverter(object converter, object? source, Type destination)
         {
             if (source==null)
                 return null;

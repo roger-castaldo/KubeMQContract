@@ -3,20 +3,16 @@ using Google.Protobuf.Collections;
 using Grpc.Core;
 using KubeMQ.Contract.Attributes;
 using KubeMQ.Contract.Interfaces;
+using KubeMQ.Contract.Interfaces.Conversion;
+using KubeMQ.Contract.Interfaces.Messages;
 using KubeMQ.Contract.Messages;
 using KubeMQ.Contract.SDK.Grpc;
 using KubeMQ.Contract.SDK.Interfaces;
 using KubeMQ.Contract.SDK.Messages;
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using static KubeMQ.Contract.SDK.Grpc.Request.Types;
 
 namespace KubeMQ.Contract.Factories
@@ -126,20 +122,25 @@ namespace KubeMQ.Contract.Factories
             return result;
         }
 
-        private Interfaces.IMessage<T> ConvertMessage(ILogProvider logProvider, string metaData, ByteString body, MapField<string, string>? tags)
+        private Interfaces.Messages.IMessage<T> ConvertMessage(ILogProvider logProvider, string metaData, ByteString body, MapField<string, string>? tags,string id,DateTime timestamp)
         {
             try
             {
                 return new Message<T>()
                 {
                     Data=ConvertData(logProvider, metaData, body, tags),
-                    Tags=tags
+                    Tags=tags,
+                    ID=id,
+                    Timestamp=timestamp
                 };
             }catch (Exception e)
             {
                 return new Message<T>()
                 {
-                    Error=e.Message
+                    Error=e.Message,
+                    Tags=tags,
+                    ID=id,
+                    Timestamp=timestamp
                 };
             }
         }
@@ -172,7 +173,7 @@ namespace KubeMQ.Contract.Factories
                 body = messageEncryptor.Encrypt(body, out messageHeader);
 
             var metaData = string.Empty;
-            if (body.Length>connectionOptions.MaxBodySize)
+            if (body.Length>(connectionOptions.MaxBodySize==0?int.MaxValue : connectionOptions.MaxBodySize))
             {
                 using var ms = new MemoryStream();
                 var zip = new GZipStream(ms, System.IO.Compression.CompressionLevel.SmallestSize, false);
@@ -197,7 +198,7 @@ namespace KubeMQ.Contract.Factories
                     tags.Add(tag.Key, tag.Value);
             }
 
-            if (body.Length > connectionOptions.MaxBodySize)
+            if (body.Length > (connectionOptions.MaxBodySize==0 ? int.MaxValue : connectionOptions.MaxBodySize))
                 throw new ArgumentOutOfRangeException(nameof(message), "message data exceeds maxmium message size");
 
 
@@ -298,14 +299,14 @@ namespace KubeMQ.Contract.Factories
             return ProduceBaseMessage(message, connectionOptions, responseChannel, tagCollection);
         }
 
-        Interfaces.IMessage<T> IMessageFactory<T>.ConvertMessage(ILogProvider logProvider, QueueMessage msg)
-            => ConvertMessage(logProvider, msg.Metadata, msg.Body, msg.Tags);
+        Interfaces.Messages.IMessage<T> IMessageFactory<T>.ConvertMessage(ILogProvider logProvider, QueueMessage msg)
+            => ConvertMessage(logProvider, msg.Metadata, msg.Body, msg.Tags, msg.MessageID, (msg.Attributes.Timestamp==0 ? DateTime.Now : Utility.FromUnixTime(msg.Attributes.Timestamp)));
 
-        Interfaces.IMessage<T> IMessageFactory<T>.ConvertMessage(ILogProvider logProvider, Request msg)
-            => ConvertMessage(logProvider, msg.Metadata, msg.Body, msg.Tags);
+        Interfaces.Messages.IMessage<T> IMessageFactory<T>.ConvertMessage(ILogProvider logProvider, Request msg)
+            => ConvertMessage(logProvider, msg.Metadata, msg.Body, msg.Tags, msg.RequestID, DateTime.Now);
 
-        Interfaces.IMessage<T> IMessageFactory<T>.ConvertMessage(ILogProvider logProvider, EventReceive msg)
-            => ConvertMessage(logProvider, msg.Metadata, msg.Body, msg.Tags);
+        Interfaces.Messages.IMessage<T> IMessageFactory<T>.ConvertMessage(ILogProvider logProvider, EventReceive msg)
+            => ConvertMessage(logProvider, msg.Metadata, msg.Body, msg.Tags,msg.EventID,(msg.Timestamp==0 ? DateTime.Now : Utility.FromUnixTime(msg.Timestamp)));
         IResultMessage<T> IMessageFactory<T>.ConvertMessage(ILogProvider logProvider, Response msg)
         {
             try

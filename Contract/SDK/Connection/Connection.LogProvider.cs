@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KubeMQ.Contract.SDK
+namespace KubeMQ.Contract.SDK.Connection
 {
     internal partial class Connection : ILogProvider
     {

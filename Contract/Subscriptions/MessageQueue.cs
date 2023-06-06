@@ -1,14 +1,8 @@
 ﻿using KubeMQ.Contract.Attributes;
 using KubeMQ.Contract.Interfaces;
+using KubeMQ.Contract.Interfaces.Messages;
 using KubeMQ.Contract.SDK.Grpc;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Reflection.Metadata.Ecma335;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace KubeMQ.Contract.Subscriptions
 {
@@ -74,7 +68,7 @@ namespace KubeMQ.Contract.Subscriptions
             logProvider.LogTrace("Peek results for Queue {} (IsError:{},Error:{},MessagesRecieved:{}",ID,res.IsError,res.Error,res.MessagesReceived);
             if (res!=null && !res.IsError && string.IsNullOrEmpty(res.Error)&&res.MessagesReceived>0)
                 return messageFactory.ConvertMessage(logProvider,res.Messages.First());
-            return default(IMessage<T>?);
+            return default;
         }
 
         public IMessage<T>? Pop()
@@ -82,7 +76,7 @@ namespace KubeMQ.Contract.Subscriptions
             var data = Pop(1);
             if (data.Any())
                 return data.First();
-            return default(IMessage<T>?);
+            return default;
         }
 
         public IEnumerable<IMessage<T>> Pop(int count)

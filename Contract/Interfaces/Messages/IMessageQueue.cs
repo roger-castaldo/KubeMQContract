@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KubeMQ.Contract.Interfaces
+namespace KubeMQ.Contract.Interfaces.Messages
 {
     /// <summary>
     /// Represents a Message Queue on the KubeMQ server of type T

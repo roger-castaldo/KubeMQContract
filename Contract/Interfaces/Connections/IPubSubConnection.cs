@@ -1,10 +1,11 @@
-﻿using System;
+﻿using KubeMQ.Contract.Interfaces.Messages;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KubeMQ.Contract.Interfaces
+namespace KubeMQ.Contract.Interfaces.Connections
 {
     /// <summary>
     /// Houses a Pub/Sub connection to a KubeMQ host and is used to Send and Recieve messages
@@ -21,6 +22,7 @@ namespace KubeMQ.Contract.Interfaces
         /// <param name="tagCollection">A set of key value pairs to me transmitted as headers attached to the message</param>
         /// <returns>A transmission result indicating the message id and or errors if an error occured</returns>
         Task<ITransmissionResult> Send<T>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, Dictionary<string, string>? tagCollection = null);
+
         /// <summary>
         /// Called to create a subscription to a Pub/Sub style Event channel
         /// </summary>

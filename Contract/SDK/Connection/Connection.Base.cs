@@ -1,8 +1,9 @@
 ﻿using KubeMQ.Contract.Interfaces;
+using KubeMQ.Contract.Interfaces.Connections;
 using KubeMQ.Contract.SDK.Grpc;
 using Microsoft.Extensions.Logging;
 
-namespace KubeMQ.Contract.SDK
+namespace KubeMQ.Contract.SDK.Connection
 {
     internal partial class Connection : IConnectionBase
     {

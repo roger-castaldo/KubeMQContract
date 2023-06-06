@@ -1,4 +1,6 @@
-﻿namespace KubeMQ.Contract.Interfaces
+﻿using KubeMQ.Contract.Interfaces.Messages;
+
+namespace KubeMQ.Contract.Interfaces
 {
     /// <summary>
     /// An implementation of this is used to encrypt/decrypt message bodies when 
