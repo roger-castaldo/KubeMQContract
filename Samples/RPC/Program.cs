@@ -8,7 +8,7 @@ var opts = new ConnectionOptions()
 
 var conn = opts.EstablishRPCQueryConnection();
 
-//Add listener
+//Add listener for Query
 var listener = conn.SubscribeRPCQuery<Hello2, Greeting>(
     message =>
     {
@@ -26,6 +26,7 @@ var listener = conn.SubscribeRPCQuery<Hello2, Greeting>(
     }
 );
 
+//Send Query calls
 var response1 = await conn.SendRPCQuery<Hello,Greeting>(new Hello()
 {
     FirstName="Bob",
@@ -51,6 +52,7 @@ else
 
 conn.Unsubscribe(listener);
 
+//Add listener for commands
 var commandConn = opts.EstablishRPCCommandConnection();
 
 commandConn.SubscribeRPCCommand<Hello2>(
@@ -72,6 +74,7 @@ commandConn.SubscribeRPCCommand<Hello2>(
     }
 );
 
+//Send commands
 var response3 = await commandConn.SendRPCCommand<Hello>(new Hello()
 {
     FirstName="Bob",
