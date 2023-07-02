@@ -18,16 +18,21 @@ namespace KubeMQ.Contract
 {
     internal static class Utility
     {
-        private static readonly DateTime EPOCH = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-
-        public static long ToUnixTime(DateTime timestamp)
+        internal static long ToUnixTime(DateTime timestamp)
         {
-            return (long)(timestamp.ToUniversalTime() - EPOCH).TotalSeconds;
+            return new DateTimeOffset(timestamp).ToUniversalTime().ToUnixTimeSeconds();
         }
 
-        internal static DateTime FromUnixTime(long serverStartTime)
+        internal static DateTime FromUnixTime(long timestamp)
         {
-            return EPOCH.AddSeconds(serverStartTime);
+            try
+            {
+                return DateTimeOffset.FromUnixTimeSeconds(timestamp).DateTime;
+            }
+            catch (Exception)
+            {
+                return DateTime.MaxValue;
+            }
         }
     }
 }

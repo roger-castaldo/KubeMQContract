@@ -18,15 +18,14 @@ namespace KubeMQ.Contract.SDK.Connection
         public void Unsubscribe(Guid id)
         {
             Log(LogLevel.Information, "Unsubscribing from {}", id);
-            lock (subscriptions)
+            dataLock.EnterWriteLock();
+            var sub = subscriptions.FirstOrDefault(s => s.ID == id);
+            if (sub!=null)
             {
-                var sub = subscriptions.FirstOrDefault(s => s.ID == id);
-                if (sub!=null)
-                {
-                    sub.Stop();
-                    subscriptions.Remove(sub);
-                }
+                sub.Stop();
+                subscriptions.Remove(sub);
             }
+            dataLock.ExitWriteLock();
         }
     }
 }

@@ -52,14 +52,13 @@ namespace KubeMQ.Contract.SDK.Connection
         }
         public void Dispose()
         {
-            lock (subscriptions)
+            dataLock.EnterWriteLock();
+            foreach (var sub in subscriptions)
             {
-                foreach (var sub in subscriptions)
-                {
-                    sub.Stop();
-                }
-                subscriptions.Clear();
+                sub.Stop();
             }
+            subscriptions.Clear();
+            dataLock.ExitWriteLock();
             dataLock.Dispose();
         }
     }
