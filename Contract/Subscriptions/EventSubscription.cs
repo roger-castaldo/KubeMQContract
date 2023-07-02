@@ -16,8 +16,9 @@ namespace KubeMQ.Contract.Subscriptions
         private readonly long storageOffset;
         private readonly Subscribe.Types.EventsStoreType eventsStoreStyle;
         private readonly Subscribe.Types.SubscribeType eventType;
+        private readonly bool synchronous;
 
-        public EventSubscription(IMessageFactory<T> messageFactory, KubeSubscription<T> subscription, kubemq.kubemqClient client, ConnectionOptions options, Action<IMessage<T>> messageRecieved, Action<Exception> errorRecieved, long storageOffset, ILogProvider logProvider, MessageReadStyle? messageReadStyle, CancellationToken cancellationToken)
+        public EventSubscription(IMessageFactory<T> messageFactory, KubeSubscription<T> subscription, kubemq.kubemqClient client, ConnectionOptions options, Action<IMessage<T>> messageRecieved, Action<Exception> errorRecieved, long storageOffset, ILogProvider logProvider, MessageReadStyle? messageReadStyle,bool synchronous, CancellationToken cancellationToken)
             : base(client,options,errorRecieved,logProvider,cancellationToken)
         {
             messageReadStyle ??= typeof(T).GetCustomAttributes<StoredMessage>().Select(sm => sm.Style).FirstOrDefault();
@@ -26,6 +27,7 @@ namespace KubeMQ.Contract.Subscriptions
             this.messageRecieved = messageRecieved;
             this.storageOffset = storageOffset;
             this.eventsStoreStyle=(messageReadStyle==null ? Subscribe.Types.EventsStoreType.Undefined : (Subscribe.Types.EventsStoreType)(int)messageReadStyle);
+            this.synchronous=synchronous;
             eventType = Subscribe.Types.SubscribeType.Events;
             if (typeof(T).GetCustomAttributes<StoredMessage>().Any())
                 eventType = Subscribe.Types.SubscribeType.EventsStore;
@@ -49,7 +51,7 @@ namespace KubeMQ.Contract.Subscriptions
 
         protected override void ProcessEvent(EventReceive evnt)
         {
-            Task.Run(() =>
+            var task = Task.Run(() =>
             {
                 logProvider.LogTrace("Message recieved {} on subscription {}", evnt.EventID, ID);
                 var msg = messageFactory.ConvertMessage(logProvider, evnt);
@@ -66,6 +68,8 @@ namespace KubeMQ.Contract.Subscriptions
                     errorRecieved(ex);
                 }
             });
+            if (synchronous)
+                task.Wait();
         }
 
     }
