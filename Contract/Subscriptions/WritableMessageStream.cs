@@ -23,9 +23,9 @@ namespace KubeMQ.Contract.Subscriptions
 
         
 
-        public async Task<ITransmissionResult> Write(T message, CancellationToken cancellationToken = default, Dictionary<string, string>? tagCollection = null)
+        public async Task<ITransmissionResult> Write(T message, Dictionary<string, string>? tagCollection = null, CancellationToken cancellationToken = default)
         {
-            var result = await this.connection.Send<T>(message, cancellationToken, this.channel, tagCollection);
+            var result = await this.connection.Send<T>(message, cancellationToken:cancellationToken, channel:this.channel, tagCollection: tagCollection);
             if (result.IsError)
                 errors++;
             else

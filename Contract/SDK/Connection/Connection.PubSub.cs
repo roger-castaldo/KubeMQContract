@@ -17,7 +17,7 @@ namespace KubeMQ.Contract.SDK.Connection
     internal partial class Connection : IPubSubConnection
     {
 
-        public async Task<ITransmissionResult> Send<T>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, Dictionary<string, string>? tagCollection = null)
+        public async Task<ITransmissionResult> Send<T>(T message, string? channel = null, Dictionary<string, string>? tagCollection = null, CancellationToken cancellationToken = new CancellationToken())
         {
             try
             {
@@ -61,7 +61,7 @@ namespace KubeMQ.Contract.SDK.Connection
             }
         }
 
-        public Guid Subscribe<T>(Action<Contract.Interfaces.Messages.IMessage<T>> messageRecieved, Action<Exception> errorRecieved, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null)
+        public Guid Subscribe<T>(Action<Contract.Interfaces.Messages.IMessage<T>> messageRecieved, Action<Exception> errorRecieved, string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null, CancellationToken cancellationToken = new CancellationToken())
         {
             var sub = new EventSubscription<T>(GetMessageFactory<T>(), new KubeSubscription<T>(this.connectionOptions, channel: channel, group: group), this.client, this.connectionOptions, messageRecieved, errorRecieved, storageOffset, this, messageReadStyle, cancellationToken);
             Log(LogLevel.Information, "Requesting Subscribe {} of type {}", sub.ID, typeof(T).Name);

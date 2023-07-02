@@ -36,20 +36,4 @@ namespace KubeMQ.Contract
         /// </summary>
         StartAtTimeDelta = 6
     };
-
-    /// <summary>
-    /// Specifies the RPC style to use.  This style must match on both the transmitter and the 
-    /// responder.
-    /// </summary>
-    public enum RPCType
-    {
-        /// <summary>
-        /// Use the Command Style
-        /// </summary>
-        Command=1, 
-        /// <summary>
-        /// Use a Query Style
-        /// </summary>
-        Query=2
-    }
 }

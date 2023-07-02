@@ -16,9 +16,9 @@ namespace KubeMQ.Contract.Interfaces.Messages
         /// Write a message of type T to the stream
         /// </summary>
         /// <param name="message">The message to be transmitted</param>
-        /// <param name="cancellationToken">A cancellation token used to cancel the step if necessary</param>
         /// <param name="tagCollection">A collection of headers to transmit along if desired</param>
+        /// <param name="cancellationToken">A cancellation token used to cancel the step if necessary</param>
         /// <returns>The result of the message transmission, the write is performed asynchronously and can be ignored if desired.</returns>
-        Task<ITransmissionResult> Write(T message, CancellationToken cancellationToken = default, Dictionary<string, string>? tagCollection = null);
+        Task<ITransmissionResult> Write(T message, Dictionary<string, string>? tagCollection = null, CancellationToken cancellationToken = default);
     }
 }

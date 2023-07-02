@@ -2,6 +2,7 @@
 using Grpc.Core;
 using KubeMQ.Contract.Interfaces;
 using KubeMQ.Contract.Interfaces.Connections;
+using KubeMQ.Contract.Interfaces.Messages;
 using KubeMQ.Contract.Messages;
 using KubeMQ.Contract.SDK.Grpc;
 using KubeMQ.Contract.Subscriptions;
@@ -14,14 +15,14 @@ using System.Threading.Tasks;
 
 namespace KubeMQ.Contract.SDK.Connection
 {
-    internal partial class Connection : IRPCConnection
+    internal partial class Connection : IRPCCommandConnection
     {
-        public async Task<Contract.Interfaces.Messages.IResultMessage<R>> SendRPC<T, R>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, Dictionary<string, string>? tagCollection = null, int? timeout = null, RPCType? type = null)
+        public async Task<IResultMessage<bool>> SendRPCCommand<T>(T message, string? channel = null, Dictionary<string, string>? tagCollection = null, int? timeout = null, CancellationToken cancellationToken = default)
         {
             try
             {
-                var msg = GetMessageFactory<T>().Request<R>(message, connectionOptions, channel, tagCollection, timeout, type);
-                Log(LogLevel.Information, "Sending RPC Message {} of type {}", msg.ID, typeof(T).Name);
+                var msg = GetMessageFactory<T>().Request(message, connectionOptions, channel, tagCollection, timeout, Request.Types.RequestType.Command);
+                Log(LogLevel.Information, "Sending RPC Command {} of type {}", msg.ID, typeof(T).Name);
                 var res = await client.SendRequestAsync(new Request()
                 {
                     RequestID=msg.ID,
@@ -36,7 +37,7 @@ namespace KubeMQ.Contract.SDK.Connection
                 if (res==null)
                 {
                     Log(LogLevel.Error, "Transmission Result for RPC {} is null", msg.ID);
-                    return new ResultMessage<R>()
+                    return new ResultMessage<bool>()
                     {
                         IsError=true,
                         Error="null response recieved from KubeMQ server"
@@ -44,17 +45,22 @@ namespace KubeMQ.Contract.SDK.Connection
                 }
                 Log(LogLevel.Information, "Transmission Result for RPC {} (IsError:{},Error:{})", msg.ID, !string.IsNullOrEmpty(res.Error), res.Error);
                 if (!res.Executed || !string.IsNullOrEmpty(res.Error))
-                    return new ResultMessage<R>()
+                    return new ResultMessage<bool>()
                     {
                         IsError=true,
-                        Error=res.Error
+                        Error=res.Error,
+                        Tags=res.Tags
                     };
-                return GetMessageFactory<R>().ConvertMessage(this, res);
+                return new ResultMessage<bool>()
+                {
+                    Response=res.Executed,
+                    Tags=res.Tags
+                };
             }
             catch (RpcException ex)
             {
                 Log(LogLevel.Error, "RPC error occured on SendRPC in send Message:{}, Status: {}", ex.Message, ex.Status);
-                return new ResultMessage<R>()
+                return new ResultMessage<bool>()
                 {
                     IsError=true,
                     Error=$"Message: {ex.Message}, Status: {ex.Status}"
@@ -63,7 +69,7 @@ namespace KubeMQ.Contract.SDK.Connection
             catch (Exception ex)
             {
                 Log(LogLevel.Error, "Exception occured in SendRPC Message:{}, Status: {}", ex.Message);
-                return new ResultMessage<R>()
+                return new ResultMessage<bool>()
                 {
                     IsError=true,
                     Error=ex.Message
@@ -71,19 +77,12 @@ namespace KubeMQ.Contract.SDK.Connection
             }
         }
 
-        public Guid SubscribeRPC<T, R>(
-            Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<R>> processMessage,
-            Action<Exception> errorRecieved,
-            CancellationToken cancellationToken = new CancellationToken(),
-            string? channel = null,
-            string group = "",
-            RPCType? commandType = null
-        )
+        public Guid SubscribeRPCCommand<T>(Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<bool>> processMessage, Action<Exception> errorRecieved, string? channel = null, string group = "", CancellationToken cancellationToken = default)
         {
-            var sub = new RPCSubscription<T, R>(GetMessageFactory<T>(), GetMessageFactory<R>(), new KubeSubscription<T>(this.connectionOptions, channel: channel, group: group),
+            var sub = new RPCCommandSubscription<T>(GetMessageFactory<T>(), new KubeSubscription<T>(this.connectionOptions, channel: channel, group: group),
                 this.client,
                 this.connectionOptions, processMessage, errorRecieved, this,
-                commandType: commandType, cancellationToken: cancellationToken);
+                cancellationToken: cancellationToken);
             Log(LogLevel.Information, "Requesting SubscribeRPC {} of type {}", sub.ID, typeof(T).Name);
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             sub.Start();

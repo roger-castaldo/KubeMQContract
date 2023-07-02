@@ -13,7 +13,7 @@ namespace KubeMQ.Contract.Interfaces.Messages
         IKubeEnqueue Enqueue(T message, ConnectionOptions connectionOptions, string? channel, Dictionary<string, string>? tagCollection, int? delaySeconds, int? expirationSeconds, int? maxCount, string? maxCountChannel);
         IKubeBatchEnqueue Enqueue(IEnumerable<T> messages, ConnectionOptions connectionOptions, string? channel, Dictionary<string, string>? tagCollection, int? delaySeconds, int? expirationSeconds, int? maxCount, string? maxCountChannel);
         IKubeEvent Event(T message, ConnectionOptions connectionOptions, string? channel, Dictionary<string, string>? tagCollection);
-        IKubeRequest Request<R>(T message, ConnectionOptions connectionOptions, string? channel, Dictionary<string, string>? tagCollection, int? timeout, RPCType? type);
+        IKubeRequest Request(T message, ConnectionOptions connectionOptions, string? channel, Dictionary<string, string>? tagCollection, int? timeout, Request.Types.RequestType type);
         IKubeMessage Response(T message, ConnectionOptions connectionOptions, string responseChannel, Dictionary<string, string>? tagCollection);
         IMessage<T> ConvertMessage(ILogProvider logProvider, QueueMessage msg);
         IMessage<T> ConvertMessage(ILogProvider logProvider, Request msg);
