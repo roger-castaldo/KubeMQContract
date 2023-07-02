@@ -8,37 +8,31 @@ using System.Reflection;
 
 namespace KubeMQ.Contract.Subscriptions
 {
-    internal class RPCSubscription<T,R> : SubscriptionBase<Request>
+    internal class RPCQuerySubscription<T,R> : SubscriptionBase<Request>
     {
         private readonly IMessageFactory<T> incomingFactory;
         private readonly IMessageFactory<R> outgoingFactory;
         private readonly KubeSubscription<T> subscription;
         private readonly Func<IMessage<T>, TaggedResponse<R>> processMessage;
-        private readonly RPCType commandType;
         
-        public RPCSubscription(IMessageFactory<T> incomingFactory, IMessageFactory<R> outgoingFactory, KubeSubscription<T> subscription, kubemq.kubemqClient client, ConnectionOptions connectionOptions, Func<IMessage<T>, TaggedResponse<R>> processMessage, Action<Exception> errorRecieved, ILogProvider logProvider, RPCType? commandType, CancellationToken cancellationToken)
+        public RPCQuerySubscription(IMessageFactory<T> incomingFactory, IMessageFactory<R> outgoingFactory, KubeSubscription<T> subscription, kubemq.kubemqClient client, ConnectionOptions connectionOptions, Func<IMessage<T>, TaggedResponse<R>> processMessage, Action<Exception> errorRecieved, ILogProvider logProvider, CancellationToken cancellationToken)
             : base(client, connectionOptions, errorRecieved, logProvider, cancellationToken)
         {
             this.incomingFactory=incomingFactory;
             this.outgoingFactory=outgoingFactory;
             this.subscription = subscription;
             this.processMessage = processMessage;
-            commandType ??= (typeof(T).GetCustomAttributes<RPCCommandType>().Any() ? typeof(T).GetCustomAttributes<RPCCommandType>().First().Type : null);
-            if (commandType==null)
-                throw new ArgumentNullException(nameof(commandType), "message must have an RPC type value");
-            
-            this.commandType = commandType.Value;
         }
 
         protected override AsyncServerStreamingCall<Request> EstablishCall()
         {
-            logProvider.LogTrace("Attempting to establish RPC subscription {} to {} on channel {} for type {} returning type {}", ID, options.Address, subscription.Channel, typeof(T).Name, typeof(R).Name);
+            logProvider.LogTrace("Attempting to establish RPC Query subscription {} to {} on channel {} for type {} returning type {}", ID, options.Address, subscription.Channel, typeof(T).Name, typeof(R).Name);
             return client.SubscribeToRequests(new Subscribe()
             {
                 Channel = subscription.Channel,
                 ClientID = subscription.ClientID,
                 Group = subscription.Group,
-                SubscribeTypeData = (Subscribe.Types.SubscribeType)((int)this.commandType+2)
+                SubscribeTypeData = Subscribe.Types.SubscribeType.Queries
             },
             options.GrpcMetadata,
             null, cancellationToken.Token);

@@ -14,7 +14,7 @@ namespace KubeMQ.Contract.Subscriptions
 {
     internal abstract class SubscriptionBase<TResponse> : IMessageSubscription
     {
-        public Guid ID => Guid.NewGuid();
+        public Guid ID { get; private init; } = Guid.NewGuid();
         protected readonly kubemq.kubemqClient client;
         protected readonly ConnectionOptions options;
         protected readonly CancellationTokenSource cancellationToken;
@@ -50,6 +50,8 @@ namespace KubeMQ.Contract.Subscriptions
                     {
                         if (active)
                             ProcessEvent(call.ResponseStream.Current);
+                        else
+                            break;
                     }
                 }
                 catch (RpcException rpcx)
@@ -69,8 +71,8 @@ namespace KubeMQ.Contract.Subscriptions
                     logProvider.LogError("Error recieved on subscription {}.  Message:{}", ID, e.Message);
                     errorRecieved(e);
                 }
-
-                await Task.Delay(options.ReconnectInterval);
+                if (active && !cancellationToken.IsCancellationRequested)
+                    await Task.Delay(options.ReconnectInterval);
             }
         }
 
@@ -78,6 +80,7 @@ namespace KubeMQ.Contract.Subscriptions
         {
             logProvider.LogTrace("Stop called for subscription {}", ID);
             active = false;
+            this.cancellationToken.Cancel();
         }
 
         protected abstract AsyncServerStreamingCall<TResponse> EstablishCall();

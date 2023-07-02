@@ -13,10 +13,9 @@ namespace KubeMQ.Contract.SDK.Connection
             var stream = new ReadonlyMessageStream<T>(GetMessageFactory<T>(), new KubeSubscription<T>(this.connectionOptions, channel: channel, group: group), this.client, this.connectionOptions, errorRecieved, storageOffset, this, messageReadStyle, cancellationToken);
             Log(LogLevel.Information, "Requesting MessageStream {} of type {}", stream.ID, typeof(T).Name);
             stream.Start();
-            lock (subscriptions)
-            {
-                subscriptions.Add(stream);
-            }
+            dataLock.EnterWriteLock();
+            subscriptions.Add(stream);
+            dataLock.ExitWriteLock();
             return stream;
         }
 

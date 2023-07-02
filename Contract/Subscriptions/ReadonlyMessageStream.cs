@@ -8,7 +8,7 @@ namespace KubeMQ.Contract.Subscriptions
 {
     internal class ReadonlyMessageStream<T> : MessageStream,IReadonlyMessageStream<T>, IMessageSubscription
     {
-        public Guid ID => Guid.NewGuid();
+        public Guid ID { get; private init; } = Guid.NewGuid();
         private readonly EventSubscription<T> _subscription;
         private readonly Channel<IMessage<T>> _channel;
 
@@ -27,7 +27,7 @@ namespace KubeMQ.Contract.Subscriptions
             {
                 errors++;
                 errorRecieved(err);
-            }, storageOffset, logProvider, messageReadStyle, cancellationToken);
+            }, storageOffset, logProvider, messageReadStyle,true, cancellationToken);
         }
 
         public override void Dispose()

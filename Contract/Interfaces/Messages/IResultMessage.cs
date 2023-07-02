@@ -7,10 +7,10 @@ using System.Threading.Tasks;
 namespace KubeMQ.Contract.Interfaces.Messages
 {
     /// <summary>
-    /// Houses a Response from an RPC call
+    /// Houses a response from an RPC call
     /// </summary>
-    /// <typeparam name="T">The type of response expected</typeparam>
-    public interface IResultMessage<T> : IMessageHeader, ITransmissionResult
+    /// <typeparam name="T"></typeparam>
+    public interface IResultMessage<T> : ITransmissionResult,IMessageHeader
     {
         /// <summary>
         /// Houses the Response, if one is returned, from the RPC call

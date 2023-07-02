@@ -17,7 +17,7 @@ namespace KubeMQ.Contract.SDK.Connection
     internal partial class Connection : IPubSubConnection
     {
 
-        public async Task<ITransmissionResult> Send<T>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, Dictionary<string, string>? tagCollection = null)
+        public async Task<ITransmissionResult> Send<T>(T message, string? channel = null, Dictionary<string, string>? tagCollection = null, CancellationToken cancellationToken = new CancellationToken())
         {
             try
             {
@@ -61,17 +61,16 @@ namespace KubeMQ.Contract.SDK.Connection
             }
         }
 
-        public Guid Subscribe<T>(Action<Contract.Interfaces.Messages.IMessage<T>> messageRecieved, Action<Exception> errorRecieved, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null)
+        public Guid Subscribe<T>(Action<Contract.Interfaces.Messages.IMessage<T>> messageRecieved, Action<Exception> errorRecieved, string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null, CancellationToken cancellationToken = new CancellationToken())
         {
-            var sub = new EventSubscription<T>(GetMessageFactory<T>(), new KubeSubscription<T>(this.connectionOptions, channel: channel, group: group), this.client, this.connectionOptions, messageRecieved, errorRecieved, storageOffset, this, messageReadStyle, cancellationToken);
+            var sub = new EventSubscription<T>(GetMessageFactory<T>(), new KubeSubscription<T>(this.connectionOptions, channel: channel, group: group), this.client, this.connectionOptions, messageRecieved, errorRecieved, storageOffset, this, messageReadStyle,false, cancellationToken);
             Log(LogLevel.Information, "Requesting Subscribe {} of type {}", sub.ID, typeof(T).Name);
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             sub.Start();
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            lock (subscriptions)
-            {
-                subscriptions.Add(sub);
-            }
+            dataLock.EnterWriteLock();
+            subscriptions.Add(sub);
+            dataLock.ExitWriteLock();
             return sub.ID;
         }
     }

@@ -14,13 +14,13 @@ using System.Threading.Tasks;
 
 namespace KubeMQ.Contract.SDK.Connection
 {
-    internal partial class Connection : IRPCConnection
+    internal partial class Connection : IRPCQueryConnection
     {
-        public async Task<Contract.Interfaces.Messages.IResultMessage<R>> SendRPC<T, R>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, Dictionary<string, string>? tagCollection = null, int? timeout = null, RPCType? type = null)
+        public async Task<Contract.Interfaces.Messages.IResultMessage<R>> SendRPCQuery<T, R>(T message, string? channel = null, Dictionary<string, string>? tagCollection = null, int? timeout = null, CancellationToken cancellationToken = new CancellationToken())
         {
             try
             {
-                var msg = GetMessageFactory<T>().Request<R>(message, connectionOptions, channel, tagCollection, timeout, type);
+                var msg = GetMessageFactory<T>().Request(message, connectionOptions, channel, tagCollection, timeout, Request.Types.RequestType.Query);
                 Log(LogLevel.Information, "Sending RPC Message {} of type {}", msg.ID, typeof(T).Name);
                 var res = await client.SendRequestAsync(new Request()
                 {
@@ -71,27 +71,25 @@ namespace KubeMQ.Contract.SDK.Connection
             }
         }
 
-        public Guid SubscribeRPC<T, R>(
+        public Guid SubscribeRPCQuery<T, R>(
             Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<R>> processMessage,
             Action<Exception> errorRecieved,
-            CancellationToken cancellationToken = new CancellationToken(),
             string? channel = null,
             string group = "",
-            RPCType? commandType = null
+            CancellationToken cancellationToken = new CancellationToken()
         )
         {
-            var sub = new RPCSubscription<T, R>(GetMessageFactory<T>(), GetMessageFactory<R>(), new KubeSubscription<T>(this.connectionOptions, channel: channel, group: group),
+            var sub = new RPCQuerySubscription<T, R>(GetMessageFactory<T>(), GetMessageFactory<R>(), new KubeSubscription<T>(this.connectionOptions, channel: channel, group: group),
                 this.client,
                 this.connectionOptions, processMessage, errorRecieved, this,
-                commandType: commandType, cancellationToken: cancellationToken);
+                cancellationToken: cancellationToken);
             Log(LogLevel.Information, "Requesting SubscribeRPC {} of type {}", sub.ID, typeof(T).Name);
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             sub.Start();
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            lock (subscriptions)
-            {
-                subscriptions.Add(sub);
-            }
+            dataLock.EnterWriteLock();
+            subscriptions.Add(sub);
+            dataLock.ExitWriteLock();
             return sub.ID;
         }
     }

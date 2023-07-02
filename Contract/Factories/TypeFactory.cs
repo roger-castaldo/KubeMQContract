@@ -19,7 +19,7 @@ namespace KubeMQ.Contract.Factories
 {
     internal class TypeFactory<T>:IMessageFactory<T>,IConversionPath<T>
     {
-        private static readonly Regex regMetaData = new(@"^(U|C)-(.+)-((\d+\.)*(\d+))$", RegexOptions.Compiled);
+        private static readonly Regex regMetaData = new(@"^(U|C)-(.+)-((\d+\.)*(\d+))$", RegexOptions.Compiled,TimeSpan.FromMilliseconds(200));
 
         private readonly IGlobalMessageEncoder? globalMessageEncoder;
         private readonly IGlobalMessageEncryptor? globalMessageEncryptor;
@@ -31,7 +31,6 @@ namespace KubeMQ.Contract.Factories
         private readonly string messageVersion = typeof(T).GetCustomAttributes<MessageVersion>().Select(mc => mc.Version.ToString()).FirstOrDefault("0.0.0.0");
         private readonly string messageChannel = typeof(T).GetCustomAttributes<MessageChannel>().Select(mc => mc.Name).FirstOrDefault(string.Empty);
         private readonly bool stored = typeof(T).GetCustomAttributes<StoredMessage>().FirstOrDefault() != null;
-        private readonly RPCType? rpcType = (typeof(T).GetCustomAttributes<RPCCommandType>().Any() ? typeof(T).GetCustomAttributes<RPCCommandType>().First().Type : null);
         private readonly int requestTimeout = typeof(T).GetCustomAttributes<MessageResponseTimeout>().Select(mrt => mrt.Value).FirstOrDefault(5000);
 
         public TypeFactory(IGlobalMessageEncoder? globalMessageEncoder, IGlobalMessageEncryptor? globalMessageEncryptor)
@@ -282,15 +281,12 @@ namespace KubeMQ.Contract.Factories
             };
         }
 
-        IKubeRequest IMessageFactory<T>.Request<R>(T message, ConnectionOptions connectionOptions, string? channel, Dictionary<string, string>? tagCollection, int? timeout, RPCType? type)
+        IKubeRequest IMessageFactory<T>.Request(T message, ConnectionOptions connectionOptions, string? channel, Dictionary<string, string>? tagCollection, int? timeout,RequestType requestType)
         {
-            type ??= rpcType;
-            if (type==null)
-                throw new ArgumentNullException(nameof(type), "message must have an RPC type value");
             return new KubeRequest(ProduceBaseMessage(message, connectionOptions, channel, tagCollection))
             {
                 Timeout=timeout??requestTimeout,
-                CommandType=(RequestType)(int)type.Value
+                CommandType=requestType
             };
         }
 
