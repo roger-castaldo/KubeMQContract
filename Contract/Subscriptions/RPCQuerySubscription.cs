@@ -26,7 +26,7 @@ namespace KubeMQ.Contract.Subscriptions
 
         protected override AsyncServerStreamingCall<Request> EstablishCall()
         {
-            logProvider.LogTrace("Attempting to establish RPC Query subscription {} to {} on channel {} for type {} returning type {}", ID, options.Address, subscription.Channel, typeof(T).Name, typeof(R).Name);
+            logProvider.LogTrace("Attempting to establish RPC Query subscription {} to {} on channel {} for type {} returning type {}", ID, options.Address, subscription.Channel, Utility.TypeName<T>(), Utility.TypeName<R>());
             return client.SubscribeToRequests(new Subscribe()
             {
                 Channel = subscription.Channel,

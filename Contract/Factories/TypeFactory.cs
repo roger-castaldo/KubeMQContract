@@ -27,7 +27,7 @@ namespace KubeMQ.Contract.Factories
         private readonly IMessageEncryptor<T> messageEncryptor;
         private readonly IEnumerable<IConversionPath<T>> converters;
 
-        private readonly string messageName = typeof(T).GetCustomAttributes<MessageName>().Select(mn => mn.Value).FirstOrDefault(typeof(T).Name);
+        private readonly string messageName = typeof(T).GetCustomAttributes<MessageName>().Select(mn => mn.Value).FirstOrDefault(Utility.TypeName<T>());
         private readonly string messageVersion = typeof(T).GetCustomAttributes<MessageVersion>().Select(mc => mc.Version.ToString()).FirstOrDefault("0.0.0.0");
         private readonly string messageChannel = typeof(T).GetCustomAttributes<MessageChannel>().Select(mc => mc.Name).FirstOrDefault(string.Empty);
         private readonly bool stored = typeof(T).GetCustomAttributes<StoredMessage>().FirstOrDefault() != null;
@@ -84,7 +84,7 @@ namespace KubeMQ.Contract.Factories
             if (match.Success)
             {
                 isCompressed=match.Groups[1].Value=="C";
-                if (match.Groups[2].Value==t.GetCustomAttributes<MessageName>().Select(mn => mn.Value).FirstOrDefault(t.Name)
+                if (match.Groups[2].Value==t.GetCustomAttributes<MessageName>().Select(mn => mn.Value).FirstOrDefault(Utility.TypeName(t))
                     && new Version(match.Groups[3].Value)==new Version(t.GetCustomAttributes<MessageVersion>().Select(mc => mc.Version.ToString()).FirstOrDefault("0.0.0.0")))
                     return true;
 

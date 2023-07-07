@@ -38,7 +38,7 @@ namespace KubeMQ.Contract.Factories
                 result = messageEncoder.Decode(stream);
             foreach (var converter in path)
             {
-                logProvider.LogTrace("Attempting to convert {} to {} through converters for {}", typeof(T).Name, typeof(V).Name, ExtractGenericArguements(converter.GetType())[0].Name);
+                logProvider.LogTrace("Attempting to convert {} to {} through converters for {}", Utility.TypeName<T>(), Utility.TypeName<V>(), Utility.TypeName(ExtractGenericArguements(converter.GetType())[0]));
                 result = ExecuteConverter(converter, result, ExtractGenericArguements(converter.GetType())[1]);
             }
             return (V?)result;

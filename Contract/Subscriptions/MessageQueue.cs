@@ -30,7 +30,7 @@ namespace KubeMQ.Contract.Subscriptions
             this.channel = channel??typeof(T).GetCustomAttributes<MessageChannel>().Select(mc => mc.Name).FirstOrDefault(String.Empty);
             if (string.IsNullOrEmpty(this.channel))
                 throw new ArgumentNullException(nameof(channel), "message must have a channel value");
-            logProvider.LogTrace("Establishing Message Queue {} for {}", ID, typeof(T).Name);
+            logProvider.LogTrace("Establishing Message Queue {} for {}", ID, Utility.TypeName<T>());
         }
 
         public bool HasMore

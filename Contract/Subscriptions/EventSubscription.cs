@@ -35,7 +35,7 @@ namespace KubeMQ.Contract.Subscriptions
 
         protected override AsyncServerStreamingCall<EventReceive> EstablishCall()
         {
-            logProvider.LogTrace("Attempting to establish subscription {} to {} on channel {} for type {}", ID, options.Address, subscription.Channel, typeof(T).Name);
+            logProvider.LogTrace("Attempting to establish subscription {} to {} on channel {} for type {}", ID, options.Address, subscription.Channel, Utility.TypeName<T>());
             return client.SubscribeToEvents(new Subscribe()
             {
                 Channel = subscription.Channel,

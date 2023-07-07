@@ -34,5 +34,18 @@ namespace KubeMQ.Contract
                 return DateTime.MaxValue;
             }
         }
+
+        internal static string TypeName<T>()
+        {
+            return TypeName(typeof(T));
+        }
+
+        internal static string TypeName(Type type)
+        {
+            var result = type.Name;
+            if (result.Contains('`'))
+                result=result[..result.IndexOf('`')];
+            return result;
+        }
     }
 }

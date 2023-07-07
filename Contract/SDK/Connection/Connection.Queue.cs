@@ -22,7 +22,7 @@ namespace KubeMQ.Contract.SDK.Connection
             try
             {
                 var msg = GetMessageFactory<T>().Enqueue(message, connectionOptions, channel, tagCollection, delaySeconds, expirationSeconds, maxQueueSize, maxQueueChannel);
-                Log(LogLevel.Information, "Sending EnqueueMessage {} of type {}", msg.ID, typeof(T).Name);
+                Log(LogLevel.Information, "Sending EnqueueMessage {} of type {}", msg.ID, Utility.TypeName<T>());
                 var res = await client.SendQueueMessageAsync(new QueueMessage()
                 {
                     MessageID= msg.ID,
@@ -67,7 +67,7 @@ namespace KubeMQ.Contract.SDK.Connection
             try
             {
                 var msg = GetMessageFactory<T>().Enqueue(messages, connectionOptions, channel, tagCollection, delaySeconds, expirationSeconds, maxQueueSize, maxQueueChannel);
-                Log(LogLevel.Information, "Sending EnqueueMessages {} of type {}", msg.ID, typeof(T).Name);
+                Log(LogLevel.Information, "Sending EnqueueMessages {} of type {}", msg.ID, Utility.TypeName<T>());
                 var res = await client.SendQueueMessagesBatchAsync(
                     new QueueMessagesBatchRequest()
                     {
@@ -127,7 +127,7 @@ namespace KubeMQ.Contract.SDK.Connection
 
         public IMessageQueue<T> SubscribeToQueue<T>(CancellationToken cancellationToken = default, string? channel = null)
         {
-            Log(LogLevel.Information, "Requesting SubscribeToQueue of type {}", typeof(T).Name);
+            Log(LogLevel.Information, "Requesting SubscribeToQueue of type {}", Utility.TypeName<T>());
             return new MessageQueue<T>(GetMessageFactory<T>(), connectionOptions, client, this, channel);
         }
 

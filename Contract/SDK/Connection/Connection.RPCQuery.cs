@@ -21,7 +21,7 @@ namespace KubeMQ.Contract.SDK.Connection
             try
             {
                 var msg = GetMessageFactory<T>().Request(message, connectionOptions, channel, tagCollection, timeout, Request.Types.RequestType.Query);
-                Log(LogLevel.Information, "Sending RPC Message {} of type {}", msg.ID, typeof(T).Name);
+                Log(LogLevel.Information, "Sending RPC Message {} of type {}", msg.ID, Utility.TypeName<T>());
                 var res = await client.SendRequestAsync(new Request()
                 {
                     RequestID=msg.ID,
@@ -83,7 +83,7 @@ namespace KubeMQ.Contract.SDK.Connection
                 this.client,
                 this.connectionOptions, processMessage, errorRecieved, this,
                 cancellationToken: cancellationToken);
-            Log(LogLevel.Information, "Requesting SubscribeRPC {} of type {}", sub.ID, typeof(T).Name);
+            Log(LogLevel.Information, "Requesting SubscribeRPC {} of type {}", sub.ID, Utility.TypeName<T>());
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             sub.Start();
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed

@@ -22,7 +22,7 @@ namespace KubeMQ.Contract.SDK.Connection
             try
             {
                 var msg = GetMessageFactory<T>().Event(message, connectionOptions, channel, tagCollection);
-                Log(LogLevel.Information, "Sending Message {} of type {}", msg.ID, typeof(T).Name);
+                Log(LogLevel.Information, "Sending Message {} of type {}", msg.ID, Utility.TypeName<T>());
                 var res = await client.SendEventAsync(new Event
                 {
                     EventID = msg.ID,
@@ -64,7 +64,7 @@ namespace KubeMQ.Contract.SDK.Connection
         public Guid Subscribe<T>(Action<Contract.Interfaces.Messages.IMessage<T>> messageRecieved, Action<Exception> errorRecieved, string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null, CancellationToken cancellationToken = new CancellationToken())
         {
             var sub = new EventSubscription<T>(GetMessageFactory<T>(), new KubeSubscription<T>(this.connectionOptions, channel: channel, group: group), this.client, this.connectionOptions, messageRecieved, errorRecieved, storageOffset, this, messageReadStyle,false, cancellationToken);
-            Log(LogLevel.Information, "Requesting Subscribe {} of type {}", sub.ID, typeof(T).Name);
+            Log(LogLevel.Information, "Requesting Subscribe {} of type {}", sub.ID, Utility.TypeName<T>());
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             sub.Start();
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
