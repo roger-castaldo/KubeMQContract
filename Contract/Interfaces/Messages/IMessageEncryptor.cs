@@ -6,7 +6,7 @@
     /// as well as the default of not encrypting the message body
     /// </summary>
     /// <typeparam name="T">The type of message that this encryptor supports</typeparam>
-    public interface IMessageEncryptor<T>
+    public interface IMessageEncryptor<T> 
     {
         /// <summary>
         /// Called to Decrypt the byte stream provided by the KubeMQ message

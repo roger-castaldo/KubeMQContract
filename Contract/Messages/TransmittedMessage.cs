@@ -1,27 +1,35 @@
 ﻿using Google.Protobuf.Collections;
-using KubeMQ.Contract.Interfaces;
 using KubeMQ.Contract.Interfaces.Messages;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace KubeMQ.Contract.Messages
 {
-    internal class TransmittedMessage : TransmissionResult, IMessageHeader,ITransmissionResult
+    internal class TransmittedMessage : TransmissionResult, IMessageHeader
     {
-        internal MapField<string, string>? Tags { get; init; }
+        private MapField<string, string>? _tags;
+        internal MapField<string, string>? Tags { init { _tags=value; } }
 
-        public IEnumerable<string> Keys => (Tags==null ? Array.Empty<string>() : Tags.Keys);
+        public IEnumerable<string> Keys => (_tags==null ? Array.Empty<string>() : _tags.Keys);
 
         public string? this[string key]
         {
             get
             {
                 string? value = null;
-                Tags?.TryGetValue(key, out value);
+                _tags?.TryGetValue(key, out value);
                 return value;
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // TODO: dispose managed state (managed objects)
+                    _tags=null;
+                }
+                base.Dispose(disposing);
             }
         }
     }

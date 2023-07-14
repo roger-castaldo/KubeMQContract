@@ -1,30 +1,21 @@
 ﻿using KubeMQ.Contract.Attributes;
-using KubeMQ.Contract.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace KubeMQ.Contract.SDK
 {
     internal class KubeSubscription<T>
     {
-        private readonly string clientID;
-        public string ClientID => clientID;
-        private readonly string channel;
-        public string Channel=> channel;
-        private readonly string group;
-        public string Group => group;
+        public string ClientID { get; private init; }
+        public string Channel { get; private init; }
+        public string Group { get;private init; }
 
 
-        public KubeSubscription(ConnectionOptions connectionOptions, string? channel = null,string group = "")
+        public KubeSubscription(string connectionClientID,Guid id, string? channel = null,string group = "")
         {
-            this.clientID=connectionOptions.ClientId;
-            this.channel = channel??typeof(T).GetCustomAttributes<MessageChannel>().Select(mc => mc.Name).FirstOrDefault(String.Empty);
-            this.group=group;
-            if (string.IsNullOrEmpty(this.channel))
+            ClientID=$"{connectionClientID}[SUB:{id}]";
+            Channel = channel??typeof(T).GetCustomAttributes<MessageChannel>().Select(mc => mc.Name).FirstOrDefault(String.Empty);
+            Group=group;
+            if (string.IsNullOrEmpty(Channel))
                 throw new ArgumentNullException(nameof(channel), "message must have a channel value");
             if (group==null)
                 throw new ArgumentNullException(nameof(group));

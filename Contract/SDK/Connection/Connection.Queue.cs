@@ -7,11 +7,6 @@ using KubeMQ.Contract.Messages;
 using KubeMQ.Contract.SDK.Grpc;
 using KubeMQ.Contract.Subscriptions;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace KubeMQ.Contract.SDK.Connection
 {
@@ -21,7 +16,7 @@ namespace KubeMQ.Contract.SDK.Connection
         {
             try
             {
-                var msg = GetMessageFactory<T>().Enqueue(message, connectionOptions, channel, tagCollection, delaySeconds, expirationSeconds, maxQueueSize, maxQueueChannel);
+                var msg = GetMessageFactory<T>().Enqueue(message, connectionOptions,clientID, channel, tagCollection, delaySeconds, expirationSeconds, maxQueueSize, maxQueueChannel);
                 Log(LogLevel.Information, "Sending EnqueueMessage {} of type {}", msg.ID, Utility.TypeName<T>());
                 var res = await client.SendQueueMessageAsync(new QueueMessage()
                 {
@@ -33,7 +28,7 @@ namespace KubeMQ.Contract.SDK.Connection
                     Tags = { msg.Tags },
                     Policy = msg.Policy,
                     Attributes = msg.Attributes
-                }, connectionOptions.GrpcMetadata, null, cancellationToken);
+                }, connectionOptions.GrpcMetadata, cancellationToken);
                 Log(LogLevel.Information, "Transmission Result for EnqueueMessage {} (IsError:{},Error:{})", msg.ID, !string.IsNullOrEmpty(res.Error), res.Error);
                 return new TransmissionResult()
                 {
@@ -66,14 +61,14 @@ namespace KubeMQ.Contract.SDK.Connection
         {
             try
             {
-                var msg = GetMessageFactory<T>().Enqueue(messages, connectionOptions, channel, tagCollection, delaySeconds, expirationSeconds, maxQueueSize, maxQueueChannel);
+                var msg = GetMessageFactory<T>().Enqueue(messages, connectionOptions,clientID, channel, tagCollection, delaySeconds, expirationSeconds, maxQueueSize, maxQueueChannel);
                 Log(LogLevel.Information, "Sending EnqueueMessages {} of type {}", msg.ID, Utility.TypeName<T>());
                 var res = await client.SendQueueMessagesBatchAsync(
                     new QueueMessagesBatchRequest()
                     {
                         BatchID=msg.ID.ToString(),
                         Messages={ msg.Messages }
-                    }, connectionOptions.GrpcMetadata, null, cancellationToken);
+                    }, connectionOptions.GrpcMetadata, cancellationToken);
                 if (res==null)
                 {
                     Log(LogLevel.Error, "EnqueueMessages response for {} is null from KubeMQ server", msg.ID);
@@ -128,7 +123,8 @@ namespace KubeMQ.Contract.SDK.Connection
         public IMessageQueue<T> SubscribeToQueue<T>(CancellationToken cancellationToken = default, string? channel = null)
         {
             Log(LogLevel.Information, "Requesting SubscribeToQueue of type {}", Utility.TypeName<T>());
-            return new MessageQueue<T>(GetMessageFactory<T>(), connectionOptions, client, this, channel);
+            var id = Guid.NewGuid();
+            return new MessageQueue<T>(id,GetMessageFactory<T>(), connectionOptions, EstablishConnection(), ProduceLogger(id), channel);
         }
 
     }

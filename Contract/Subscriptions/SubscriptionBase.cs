@@ -1,89 +1,158 @@
 ﻿using Grpc.Core;
 using KubeMQ.Contract.Interfaces;
 using KubeMQ.Contract.Interfaces.Messages;
-using KubeMQ.Contract.SDK;
+using KubeMQ.Contract.SDK.Connection;
 using KubeMQ.Contract.SDK.Grpc;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static KubeMQ.Contract.SDK.Grpc.Subscribe.Types;
+using Microsoft.Extensions.Logging;
+using System.Threading.Channels;
 
 namespace KubeMQ.Contract.Subscriptions
 {
     internal abstract class SubscriptionBase<TResponse> : IMessageSubscription
     {
         public Guid ID { get; private init; } = Guid.NewGuid();
-        protected readonly kubemq.kubemqClient client;
+        protected readonly KubeClient client;
         protected readonly ConnectionOptions options;
         protected readonly CancellationTokenSource cancellationToken;
         private bool active = true;
-        protected readonly ILogProvider logProvider;
+        private ManualResetEvent? startEvent;
+        private bool disposedValue;
+        protected readonly ILogger? logger;
         protected readonly Action<Exception> errorRecieved;
+        protected readonly Channel<SRecievedMessage<TResponse>> channel;
 
-        public SubscriptionBase(kubemq.kubemqClient client, ConnectionOptions options, Action<Exception> errorRecieved,ILogProvider logProvider, CancellationToken cancellationToken)
+        public SubscriptionBase(Guid id,KubeClient client, ConnectionOptions options, Action<Exception> errorRecieved, ILogger? logger, CancellationToken cancellationToken)
         {
+            this.ID=id;
             this.client = client;
             this.options = options;
             this.errorRecieved = errorRecieved;
-            this.logProvider=logProvider;
+            this.logger=logger;
             this.cancellationToken = new CancellationTokenSource();
+            channel = Channel.CreateUnbounded<SRecievedMessage<TResponse>>(new UnboundedChannelOptions()
+            {
+                SingleReader=true,
+                SingleWriter=true
+            });
 
             cancellationToken.Register(() =>
             {
-                active = false;
                 this.cancellationToken.Cancel();
+            });
+
+            this.cancellationToken.Token.Register(() =>
+            {
+                active = false;
+                client.Dispose();
             });
         }
 
 
-        public async Task Start()
+        public void Start()
         {
-            while (active && !cancellationToken.IsCancellationRequested)
+            startEvent = new ManualResetEvent(false);
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            Run();
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            startEvent.WaitOne();
+            startEvent.Dispose();
+            startEvent = null;
+            EstablishReader();
+        }
+
+        private void Run()
+        {
+
+            Task.Run(async () =>
             {
-                try
+                while (active && !cancellationToken.IsCancellationRequested)
                 {
-                    using var call = EstablishCall(); 
-                    logProvider.LogTrace("Connection for subscription {} established", ID);
-                    while (active && await call.ResponseStream.MoveNext(cancellationToken.Token))
+                    try
                     {
-                        if (active)
-                            ProcessEvent(call.ResponseStream.Current);
-                        else
-                            break;
+                        using var call = EstablishCall();
+                        startEvent?.Set();
+                        logger?.LogTrace("Connection for subscription {} established", ID);
+                        await foreach (var resp in call.ResponseStream.ReadAllAsync(cancellationToken.Token))
+                        {
+                            if (active)
+                                await channel.Writer.WriteAsync(new SRecievedMessage<TResponse>(resp));
+                            else
+                                break;
+                        }
+                        call.Dispose();
                     }
-                }
-                catch (RpcException rpcx)
-                {
-                    if (rpcx.StatusCode == StatusCode.Cancelled)
+                    catch (RpcException rpcx)
                     {
-                        break;
+                        switch (rpcx.StatusCode)
+                        {
+                            case StatusCode.Cancelled:
+                            case StatusCode.PermissionDenied:
+                            case StatusCode.Aborted:
+                                Stop();
+                                break;
+                            case StatusCode.Unknown:
+                            case StatusCode.Unavailable:
+                            case StatusCode.DataLoss:
+                            case StatusCode.DeadlineExceeded:
+                                logger?.LogTrace("RPC Error recieved on subscription {}, retrying connection after delay {}ms.  StatusCode:{},Message:{}", ID, options.ReconnectInterval, rpcx.StatusCode, rpcx.Message);
+                                break;
+                            default:
+                                logger?.LogError("RPC Error recieved on subscription {}.  StatusCode:{},Message:{}", ID, rpcx.StatusCode, rpcx.Message);
+                                errorRecieved(rpcx);
+                                break;
+                        }
                     }
-                    else
+                    catch (Exception e)
                     {
-                        logProvider.LogError("RPC Error recieved on subscription {}.  StatusCode:{},Message:{}", ID, rpcx.StatusCode, rpcx.Message);
-                        errorRecieved(rpcx);
+                        logger?.LogError("Error recieved on subscription {}.  Message:{}", ID, e.Message);
+                        errorRecieved(e);
                     }
+                    if (active && !cancellationToken.IsCancellationRequested)
+                        await Task.Delay(options.ReconnectInterval);
                 }
-                catch (Exception e)
-                {
-                    logProvider.LogError("Error recieved on subscription {}.  Message:{}", ID, e.Message);
-                    errorRecieved(e);
-                }
-                if (active && !cancellationToken.IsCancellationRequested)
-                    await Task.Delay(options.ReconnectInterval);
-            }
+            });
         }
 
         public void Stop()
         {
-            logProvider.LogTrace("Stop called for subscription {}", ID);
+            logger?.LogTrace("Stop called for subscription {}", ID);
             active = false;
             this.cancellationToken.Cancel();
         }
 
         protected abstract AsyncServerStreamingCall<TResponse> EstablishCall();
-        protected abstract void ProcessEvent(TResponse evnt);
+        protected abstract void EstablishReader();
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // TODO: dispose managed state (managed objects)
+                    if (!active)
+                        Stop();
+                    channel.Writer.Complete();
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+                // TODO: set large fields to null
+                disposedValue=true;
+            }
+        }
+
+        // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+        // ~SubscriptionBase()
+        // {
+        //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        //     Dispose(disposing: false);
+        // }
+
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
     }
 }

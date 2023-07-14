@@ -1,10 +1,11 @@
 ﻿using KubeMQ.Contract.Interfaces;
 using KubeMQ.Contract.Interfaces.Conversion;
 using KubeMQ.Contract.Interfaces.Messages;
+using Microsoft.Extensions.Logging;
 
 namespace KubeMQ.Contract.Factories
 {
-    internal class ConversionPath<T,V> : IConversionPath<V>
+    internal class ConversionPath<T,V> : IConversionPath<V> 
     {
         private readonly IEnumerable<object> path;
         private readonly IMessageEncoder<T> messageEncoder;
@@ -25,7 +26,7 @@ namespace KubeMQ.Contract.Factories
                 )!;
         }
 
-        public V? ConvertMessage(ILogProvider logProvider, Stream stream, IMessageHeader messageHeader)
+        public V? ConvertMessage(ILogger? logger, Stream stream, IMessageHeader messageHeader)
         {
             if (globalMessageEncryptor!=null && messageEncryptor is NonEncryptor<T>)
                 stream=globalMessageEncryptor.Decrypt(stream, messageHeader);
@@ -38,7 +39,7 @@ namespace KubeMQ.Contract.Factories
                 result = messageEncoder.Decode(stream);
             foreach (var converter in path)
             {
-                logProvider.LogTrace("Attempting to convert {} to {} through converters for {}", Utility.TypeName<T>(), Utility.TypeName<V>(), Utility.TypeName(ExtractGenericArguements(converter.GetType())[0]));
+                logger?.LogTrace("Attempting to convert {} to {} through converters for {}", Utility.TypeName<T>(), Utility.TypeName<V>(), Utility.TypeName(ExtractGenericArguements(converter.GetType())[0]));
                 result = ExecuteConverter(converter, result, ExtractGenericArguements(converter.GetType())[1]);
             }
             return (V?)result;

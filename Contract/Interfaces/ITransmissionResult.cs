@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace KubeMQ.Contract.Interfaces
+﻿namespace KubeMQ.Contract.Interfaces
 {
     /// <summary>
     /// Houses the result from transmitting a message into the system or as part of a response
     /// </summary>
-    public interface ITransmissionResult
+    public interface ITransmissionResult : IDisposable
     {
         /// <summary>
         /// The ID of the message that was generated during transmission

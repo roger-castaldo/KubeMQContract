@@ -5,7 +5,7 @@
     /// This is used to override the default Json and the Global one for the connection if specified
     /// </summary>
     /// <typeparam name="T">The type of message that this encoder supports</typeparam>
-    public interface IMessageEncoder<T>
+    public interface IMessageEncoder<T> 
     {
         /// <summary>
         /// Called to encode the message into a byte array

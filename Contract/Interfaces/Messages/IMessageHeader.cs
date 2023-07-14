@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace KubeMQ.Contract.Interfaces.Messages
+﻿namespace KubeMQ.Contract.Interfaces.Messages
 {
     /// <summary>
     /// Houses the headers that were supplied by the respective KubeMQ message (tags)
     /// </summary>
-    public interface IMessageHeader
+    public interface IMessageHeader : IDisposable
     {
         /// <summary>
         /// Called to get a value for the given key if it exists

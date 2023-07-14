@@ -2,7 +2,7 @@
 
 namespace KubeMQ.Contract.Factories
 {
-    internal class NonEncryptor<T> : IMessageEncryptor<T>
+    internal class NonEncryptor<T> : IMessageEncryptor<T> 
     {
         public Stream Decrypt(Stream data, IMessageHeader headers)
         {

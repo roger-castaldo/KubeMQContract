@@ -6,11 +6,6 @@ using KubeMQ.Contract.Messages;
 using KubeMQ.Contract.SDK.Grpc;
 using KubeMQ.Contract.Subscriptions;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace KubeMQ.Contract.SDK.Connection
 {
@@ -21,7 +16,7 @@ namespace KubeMQ.Contract.SDK.Connection
         {
             try
             {
-                var msg = GetMessageFactory<T>().Event(message, connectionOptions, channel, tagCollection);
+                var msg = GetMessageFactory<T>().Event(message, connectionOptions,clientID, channel, tagCollection);
                 Log(LogLevel.Information, "Sending Message {} of type {}", msg.ID, Utility.TypeName<T>());
                 var res = await client.SendEventAsync(new Event
                 {
@@ -32,7 +27,7 @@ namespace KubeMQ.Contract.SDK.Connection
                     Body = ByteString.CopyFrom(msg.Body),
                     Store = msg.Stored,
                     Tags = { msg.Tags }
-                }, connectionOptions.GrpcMetadata, null, cancellationToken);
+                }, connectionOptions.GrpcMetadata, cancellationToken);
                 Log(LogLevel.Information, "Transmission Result for {} (IsError:{},Error:{})", msg.ID, !string.IsNullOrEmpty(res.Error), res.Error);
                 return new TransmissionResult()
                 {
@@ -61,16 +56,24 @@ namespace KubeMQ.Contract.SDK.Connection
             }
         }
 
-        public Guid Subscribe<T>(Action<Contract.Interfaces.Messages.IMessage<T>> messageRecieved, Action<Exception> errorRecieved, string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null, CancellationToken cancellationToken = new CancellationToken())
+        public Guid Subscribe<T>(Func<KubeMQ.Contract.Interfaces.Messages.IMessage<T>, Task> messageRecieved, Action<Exception> errorRecieved, string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null, CancellationToken cancellationToken = new CancellationToken())
         {
-            var sub = new EventSubscription<T>(GetMessageFactory<T>(), new KubeSubscription<T>(this.connectionOptions, channel: channel, group: group), this.client, this.connectionOptions, messageRecieved, errorRecieved, storageOffset, this, messageReadStyle,false, cancellationToken);
-            Log(LogLevel.Information, "Requesting Subscribe {} of type {}", sub.ID, Utility.TypeName<T>());
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            sub.Start();
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            dataLock.EnterWriteLock();
-            subscriptions.Add(sub);
-            dataLock.ExitWriteLock();
+            var id = Guid.NewGuid();
+            var sub = RegisterSubscription<EventSubscription<T>>(
+                new EventSubscription<T>(
+                    id,
+                    GetMessageFactory<T>(), 
+                    new KubeSubscription<T>(clientID,id, channel: channel, group: group), 
+                    EstablishConnection(), 
+                    this.connectionOptions,
+                    messageRecieved, 
+                    errorRecieved, 
+                    storageOffset,
+                    ProduceLogger(id), 
+                    messageReadStyle,
+                    cancellationToken)
+            );
+            Log(LogLevel.Information, "Registered Subscribe {} of type {}", sub.ID, Utility.TypeName<T>());
             return sub.ID;
         }
     }

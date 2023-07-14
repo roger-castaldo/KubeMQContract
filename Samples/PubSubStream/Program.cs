@@ -5,7 +5,9 @@ using Messages;
 var sourceCancel = new CancellationTokenSource();
 
 var opts = new ConnectionOptions()
-{ };
+{
+    Logger=new Microsoft.Extensions.Logging.Debug.DebugLoggerProvider()
+};
 
 var connStream = opts.EstablishPubSubStreamConnection();
 
@@ -44,3 +46,4 @@ await foreach (var message in readStream)
 
 Console.WriteLine($"Read Stream Stats: Success: {readStream.Stats.Success}, Errors: {readStream.Stats.Errors}, Length: {readStream.Length}");
 
+readStream.Dispose();

@@ -1,21 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace KubeMQ.Contract.Interfaces.Connections
+﻿namespace KubeMQ.Contract.Interfaces.Connections
 {
     /// <summary>
     /// Houses the basis of a connection to a KubeMQ host
     /// </summary>
-    public interface IConnectionBase
+    public interface IConnectionBase : IDisposable
     {
         /// <summary>
         /// Called to Ping the host and get status information
         /// </summary>
         /// <returns>An IPingResult that houses the status and information for the host this connection is linked to</returns>
-        IPingResult Ping();
+        IPingResult? Ping();
         /// <summary>
         /// Called to remove a subscription from the connection
         /// </summary>

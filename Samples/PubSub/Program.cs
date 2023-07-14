@@ -5,17 +5,22 @@ using Messages;
 var sourceCancel = new CancellationTokenSource();
 
 var opts = new ConnectionOptions()
-{ };
+{ 
+    Logger=new Microsoft.Extensions.Logging.Debug.DebugLoggerProvider()
+};
 
 //Create subscriber
 var conn = opts.EstablishPubSubConnection();
 
-var listener = conn.Subscribe<Hello2>(message =>
+var jsonListener = conn.Subscribe<Hello2>(message =>
     {
+        System.Diagnostics.Debug.WriteLine($"Delay: {DateTime.Now.Subtract(message.Timestamp).TotalMilliseconds - DateTime.Now.Subtract(message.ConversionTimestamp).TotalMilliseconds} ms");
         Console.WriteLine($"Greetings {message.Data.Salutation} {message.Data.FirstName} {message.Data.LastName}");
+        return Task.CompletedTask;
     },
     error =>
     {
+        System.Diagnostics.Debug.WriteLine(error.StackTrace);
         Console.WriteLine(error.Message);
     }
 );
@@ -36,12 +41,11 @@ var result2 = await conn.Send<Hello2>(new Hello2()
 Console.WriteLine($"Result 1 is Error: {result1.IsError}");
 Console.WriteLine($"Result 2 is Error: {result2.IsError}");
 
-conn.Unsubscribe(listener);
-
 //Create subscriber to listen to HelloProto (protobuf encoded message) channel and convert to Hello2 for logging
-listener = conn.Subscribe<Hello2>(message =>
+var protoListener = conn.Subscribe<Hello2>(message =>
     {
         Console.WriteLine($"Greetings {message.Data.Salutation} {message.Data.FirstName} {message.Data.LastName}");
+        return Task.CompletedTask;
     },
     error =>
     {
@@ -67,4 +71,6 @@ Console.WriteLine($"Result 3 is Error: {result3.IsError}");
 Console.WriteLine($"Result 4 is Error: {result4.IsError}");
 
 Console.ReadLine();
-conn.Unsubscribe(listener);
+conn.Unsubscribe(jsonListener);
+conn.Unsubscribe(protoListener);
+conn.Dispose();

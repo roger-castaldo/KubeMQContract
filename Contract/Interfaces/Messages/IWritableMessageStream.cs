@@ -1,16 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace KubeMQ.Contract.Interfaces.Messages
+﻿namespace KubeMQ.Contract.Interfaces.Messages
 {
     /// <summary>
     /// A Writable message Stream designed to transmit the messages of type T
     /// </summary>
     /// <typeparam name="T">The type of message that this stream will be transmitting</typeparam>
-    public interface IWritableMessageStream<T> : IMessageStream,IDisposable
+    public interface IWritableMessageStream<T> : IMessageStream
     {
         /// <summary>
         /// Write a message of type T to the stream

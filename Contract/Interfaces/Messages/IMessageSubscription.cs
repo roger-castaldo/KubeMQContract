@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace KubeMQ.Contract.Interfaces.Messages
+﻿namespace KubeMQ.Contract.Interfaces.Messages
 {
-    internal interface IMessageSubscription
+    internal interface IMessageSubscription : IDisposable
     {
         Guid ID { get; }
-        Task Start();
+        void Start();
         void Stop();
     }
 }

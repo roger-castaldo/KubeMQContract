@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace KubeMQ.Contract.Interfaces.Messages
+﻿namespace KubeMQ.Contract.Interfaces.Messages
 {
     /// <summary>
     /// Houses the common attributes that exist within both a ReadOnly and Writeable stream
     /// </summary>
-    public interface IMessageStream
+    public interface IMessageStream : IDisposable
     {
         /// <summary>
         /// The total number of messages sent/recieved

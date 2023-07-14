@@ -1,16 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace KubeMQ.Contract.Interfaces.Messages
+﻿namespace KubeMQ.Contract.Interfaces.Messages
 {
     /// <summary>
     /// Represents a Message Queue on the KubeMQ server of type T
     /// </summary>
     /// <typeparam name="T">The type of messages that should reside in that queue</typeparam>
-    public interface IMessageQueue<T>
+    public interface IMessageQueue<T> : IDisposable 
     {
         /// <summary>
         /// A unique ID representing the queue

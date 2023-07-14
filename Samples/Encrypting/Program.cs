@@ -13,13 +13,13 @@ var conn = opts.EstablishRPCQueryConnection(globalMessageEncryptor:new GlobalEnc
 var listener = conn.SubscribeRPCQuery<Hello2, Greeting>(
     message =>
     {
-        return new TaggedResponse<Greeting>()
+        return Task.FromResult(new TaggedResponse<Greeting>()
         {
             Response=new Greeting()
             {
                 Message=$"Greetings {message.Data.Salutation} {message.Data.FirstName} {message.Data.LastName}"
             }
-        };
+        });
     },
     error =>
     {

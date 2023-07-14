@@ -1,11 +1,10 @@
 ﻿using KubeMQ.Contract;
 using Messages;
 
-
-var sourceCancel = new CancellationTokenSource();
-
 var opts = new ConnectionOptions()
-{ };
+{
+    Logger=new Microsoft.Extensions.Logging.Debug.DebugLoggerProvider()
+};
 
 var conn = opts.EstablishQueueConnection();
 

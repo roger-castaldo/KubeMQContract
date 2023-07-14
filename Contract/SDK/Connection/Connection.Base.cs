@@ -7,10 +7,17 @@ namespace KubeMQ.Contract.SDK.Connection
 {
     internal partial class Connection : IConnectionBase
     {
-        public IPingResult Ping()
+        public IPingResult? Ping()
+        {
+            return Ping(this.client);
+        }
+
+        private IPingResult? Ping(KubeClient grpcClient)
         {
             Log(LogLevel.Information, "Calling ping to {}", connectionOptions.Address);
-            var rec = this.client.Ping(new Empty());
+            var rec = grpcClient.Ping();
+            if (rec==null)
+                return null;
             Log(LogLevel.Information, "Pind result to {} Uptime seconds {}", connectionOptions.Address, rec.ServerUpTimeSeconds);
             return new KubeMQ.Contract.SDK.PingResult(rec);
         }

@@ -1,41 +1,91 @@
-﻿using Google.Protobuf;
-using Grpc.Core;
+﻿using Grpc.Core;
+using Grpc.Net.Client;
 using KubeMQ.Contract.Factories;
 using KubeMQ.Contract.Interfaces;
 using KubeMQ.Contract.Interfaces.Connections;
 using KubeMQ.Contract.Interfaces.Messages;
-using KubeMQ.Contract.Messages;
 using KubeMQ.Contract.SDK.Grpc;
-using KubeMQ.Contract.Subscriptions;
 using Microsoft.Extensions.Logging;
+using System.IO;
+using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 
 namespace KubeMQ.Contract.SDK.Connection
 {
     internal partial class Connection : IConnection, IDisposable
     {
+        private static readonly Regex _regURL = new("^http(s)?://(.+)$", RegexOptions.Compiled|RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(500));
+
+        private readonly Guid id;
+        private readonly string clientID;
         private readonly ConnectionOptions connectionOptions;
         private readonly IGlobalMessageEncoder? globalMessageEncoder;
         private readonly IGlobalMessageEncryptor? globalMessageEncryptor;
-        private readonly kubemq.kubemqClient client;
+        private KubeClient client;
         private readonly List<IMessageSubscription> subscriptions;
         private readonly ReaderWriterLockSlim dataLock = new();
         private IEnumerable<object> typeFactories;
+        private readonly string addy;
+        private readonly ILogger? logger;
 
         public Connection(ConnectionOptions connectionOptions, IGlobalMessageEncoder? globalMessageEncoder, IGlobalMessageEncryptor? globalMessageEncryptor)
         {
+            id=Guid.NewGuid();
+            clientID = $"{connectionOptions.ClientId}[{id}]";
             this.connectionOptions = connectionOptions;
             this.globalMessageEncoder = globalMessageEncoder;
             this.globalMessageEncryptor=globalMessageEncryptor;
+            this.logger = connectionOptions.Logger?.CreateLogger($"KubeMQContract[{id}]");
             Log(LogLevel.Debug, "Attempting to establish connection to server {}", connectionOptions.Address);
-            Channel channel;
-            var sslCreds = connectionOptions.SSLCredentials;
-            channel = new Channel(this.connectionOptions.Address, (sslCreds??ChannelCredentials.Insecure));
-            client = new kubemq.kubemqClient(channel);
+            addy = this.connectionOptions.Address;
+            var match = _regURL.Match(addy);
+            if (!match.Success)
+                addy=$"http{(connectionOptions.SSLCredentials!=null ? "s" : "")}://{addy}";
+            else
+            {
+                if (connectionOptions.SSLCredentials!=null && string.IsNullOrEmpty(match.Groups[1].Value))
+                    addy = $"https://{match.Groups[2].Value}";
+                else if (connectionOptions.SSLCredentials==null && !string.IsNullOrEmpty(match.Groups[1].Value))
+                    addy = $"http://{match.Groups[2].Value}";
+            }
             subscriptions = new();
             typeFactories = Array.Empty<object>();
+            dataLock.EnterWriteLock();
+            try
+            {
+                client = EstablishConnection();
+            }
+            catch (Exception)
+            {
+                dataLock.ExitWriteLock();
+                throw;
+            }
+            dataLock.ExitWriteLock();
         }
 
-        private IMessageFactory<T> GetMessageFactory<T>()
+        private void Log(LogLevel level, string message, params object[]? args)
+        {
+#pragma warning disable CA2254 // Template should be a static expression
+            logger?.Log(level, message, args);
+#pragma warning restore CA2254 // Template should be a static expression
+        }
+
+        private KubeClient EstablishConnection()
+        {
+            var client = new KubeClient(addy, connectionOptions.SSLCredentials??ChannelCredentials.Insecure,logger);
+            var pingResult = Ping(client);
+            if (pingResult ==null)
+                throw new UnableToConnect();
+            Log(LogLevel.Debug, "Established connection to [Host:{}, Version:{}, StartTime:{}, UpTime:{}]",
+                pingResult.Host,
+                pingResult.Version,
+                pingResult.ServerStartTime,
+                pingResult.ServerUpTime
+            );
+            return client;
+        }
+
+        private IMessageFactory<T> GetMessageFactory<T>() 
         {
             dataLock.EnterReadLock();
             var result = (IMessageFactory<T>?)typeFactories.FirstOrDefault(fact => fact.GetType().GetGenericArguments()[0]==typeof(T));
@@ -50,6 +100,22 @@ namespace KubeMQ.Contract.SDK.Connection
             }
             return result;
         }
+
+        private T RegisterSubscription<T>(T sub)
+            where T : IMessageSubscription
+        {
+            sub.Start();
+            dataLock.EnterWriteLock();
+            subscriptions.Add(sub);
+            dataLock.ExitWriteLock();
+            return sub;
+        }
+
+        private ILogger? ProduceLogger(Guid subID)
+        {
+            return connectionOptions.Logger?.CreateLogger($"KubeMQContract[Conn({this.id}),Sub({subID})]");
+        }
+
         public void Dispose()
         {
             dataLock.EnterWriteLock();
@@ -58,6 +124,7 @@ namespace KubeMQ.Contract.SDK.Connection
                 sub.Stop();
             }
             subscriptions.Clear();
+            client.Dispose();
             dataLock.ExitWriteLock();
             dataLock.Dispose();
         }

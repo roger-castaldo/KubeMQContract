@@ -1,9 +1,7 @@
 ﻿using Grpc.Core;
 using KubeMQ.Contract.Interfaces;
 using KubeMQ.Contract.Interfaces.Connections;
-using KubeMQ.Contract.SDK;
 using KubeMQ.Contract.SDK.Connection;
-using KubeMQ.Contract.SDK.Grpc;
 using Microsoft.Extensions.Logging;
 
 namespace KubeMQ.Contract
@@ -18,11 +16,11 @@ namespace KubeMQ.Contract
         /// Use the format {ip/name}:{portnumber}.  Typically KubeMQ is configured to listen on 
         /// port 50000
         /// </summary>
-        public string Address { get; init; } = "localhost:50000";
+        public string Address { get; init; } = "http://localhost:50000";
         /// <summary>
         /// The Unique Identification to be used when connecting to the KubeMQ server
         /// </summary>
-        public string ClientId { get; init; } = Guid.NewGuid().ToString();
+        public string ClientId { get; init; } = string.Empty;
         /// <summary>
         /// The authentication token to use when connecting to the KubeMQ server
         /// </summary>
@@ -50,9 +48,9 @@ namespace KubeMQ.Contract
         /// </summary>
         public int MaxBodySize { get; init; } = 0;
         /// <summary>
-        /// The ILogger instance to use for logging against any connections produced by these options.
+        /// The ILoggerProvider instance to use for logging against any connections produced by these options.
         /// </summary>
-        public ILogger? Logger { get; init; } = null;
+        public ILoggerProvider? Logger { get; init; } = null;
 
         internal SslCredentials? SSLCredentials
         {

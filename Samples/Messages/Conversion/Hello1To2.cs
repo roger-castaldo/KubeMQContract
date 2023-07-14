@@ -1,6 +1,4 @@
-﻿using Messages;
-
-namespace Messages.Conversion
+﻿namespace Messages.Conversion
 {
     public class Hello1To2 : KubeMQ.Contract.Interfaces.Conversion.IMessageConverter<Hello, Hello2>
     {

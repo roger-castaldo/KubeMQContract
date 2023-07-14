@@ -4,7 +4,9 @@ using Messages;
 var sourceCancel = new CancellationTokenSource();
 
 var opts = new ConnectionOptions()
-{};
+{
+    Logger=new Microsoft.Extensions.Logging.Debug.DebugLoggerProvider()
+};
 
 var conn = opts.EstablishRPCQueryConnection();
 
@@ -12,13 +14,14 @@ var conn = opts.EstablishRPCQueryConnection();
 var listener = conn.SubscribeRPCQuery<Hello2, Greeting>(
     message =>
     {
-        return new TaggedResponse<Greeting>()
+        System.Diagnostics.Debug.WriteLine($"Delay: {DateTime.Now.Subtract(message.Timestamp).TotalMilliseconds - DateTime.Now.Subtract(message.ConversionTimestamp).TotalMilliseconds} ms");
+        return Task.FromResult(new TaggedResponse<Greeting>()
         {
             Response=new Greeting()
             {
                 Message=$"Greetings {message.Data.Salutation} {message.Data.FirstName} {message.Data.LastName}"
             }
-        };
+        });
     },
     error =>
     {
@@ -59,14 +62,14 @@ commandConn.SubscribeRPCCommand<Hello2>(
     message =>
     {
         Console.WriteLine($"Greetings {message.Data.Salutation} {message.Data.FirstName} {message.Data.LastName}");
-        return new TaggedResponse<bool>()
+        return Task.FromResult(new TaggedResponse<bool>()
         {
             Response=true,
             Tags = new Dictionary<string, string>()
             {
                 {"Salutation",message.Data.Salutation }
             }
-        };
+        });
     },
     error =>
     {

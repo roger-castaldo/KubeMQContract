@@ -1,22 +1,22 @@
 ﻿using Grpc.Core;
-using KubeMQ.Contract.Attributes;
 using KubeMQ.Contract.Interfaces;
 using KubeMQ.Contract.Interfaces.Messages;
 using KubeMQ.Contract.SDK;
+using KubeMQ.Contract.SDK.Connection;
 using KubeMQ.Contract.SDK.Grpc;
-using System.Reflection;
+using Microsoft.Extensions.Logging;
 
 namespace KubeMQ.Contract.Subscriptions
 {
-    internal class RPCQuerySubscription<T,R> : SubscriptionBase<Request>
+    internal class RPCQuerySubscription<T,R> : SubscriptionBase<Request> 
     {
         private readonly IMessageFactory<T> incomingFactory;
         private readonly IMessageFactory<R> outgoingFactory;
         private readonly KubeSubscription<T> subscription;
-        private readonly Func<IMessage<T>, TaggedResponse<R>> processMessage;
+        private readonly Func<Contract.Interfaces.Messages.IMessage<T>, Task<TaggedResponse<R>>> processMessage;
         
-        public RPCQuerySubscription(IMessageFactory<T> incomingFactory, IMessageFactory<R> outgoingFactory, KubeSubscription<T> subscription, kubemq.kubemqClient client, ConnectionOptions connectionOptions, Func<IMessage<T>, TaggedResponse<R>> processMessage, Action<Exception> errorRecieved, ILogProvider logProvider, CancellationToken cancellationToken)
-            : base(client, connectionOptions, errorRecieved, logProvider, cancellationToken)
+        public RPCQuerySubscription(Guid id,IMessageFactory<T> incomingFactory, IMessageFactory<R> outgoingFactory, KubeSubscription<T> subscription, KubeClient client, ConnectionOptions connectionOptions, Func<Contract.Interfaces.Messages.IMessage<T>, Task<TaggedResponse<R>>> processMessage, Action<Exception> errorRecieved, ILogger? logger, CancellationToken cancellationToken)
+            : base(id,client, connectionOptions, errorRecieved, logger, cancellationToken)
         {
             this.incomingFactory=incomingFactory;
             this.outgoingFactory=outgoingFactory;
@@ -26,7 +26,7 @@ namespace KubeMQ.Contract.Subscriptions
 
         protected override AsyncServerStreamingCall<Request> EstablishCall()
         {
-            logProvider.LogTrace("Attempting to establish RPC Query subscription {} to {} on channel {} for type {} returning type {}", ID, options.Address, subscription.Channel, Utility.TypeName<T>(), Utility.TypeName<R>());
+            logger?.LogTrace("Attempting to establish RPC Query subscription {} to {} on channel {} for type {} returning type {}", ID, options.Address, subscription.Channel, Utility.TypeName<T>(), Utility.TypeName<R>());
             return client.SubscribeToRequests(new Subscribe()
             {
                 Channel = subscription.Channel,
@@ -35,55 +35,74 @@ namespace KubeMQ.Contract.Subscriptions
                 SubscribeTypeData = Subscribe.Types.SubscribeType.Queries
             },
             options.GrpcMetadata,
-            null, cancellationToken.Token);
+            cancellationToken.Token);
         }
 
-        protected override void ProcessEvent(Request evnt)
+        protected override void EstablishReader()
         {
-            Task.Run(() =>
+            Task.Run(async () =>
             {
-                logProvider.LogTrace("Message recieved {} on RPC subscription {}", evnt.RequestID, ID);
-                var msg = incomingFactory.ConvertMessage(logProvider, evnt);
-                if (msg==null)
-                    throw new NullReferenceException(nameof(msg));
-                var result = processMessage(msg);
-                if (result==null)
-                    throw new NullReferenceException(nameof(result));
-                var response = outgoingFactory.Response(result.Response, options, evnt.ReplyChannel, result.Tags);
-                logProvider.LogTrace("Response generated for {} on RPC subscription {}", evnt.RequestID, ID);
-                client.SendResponse(new Response()
+                while (await channel.Reader.WaitToReadAsync(cancellationToken.Token))
                 {
-                    CacheHit=false,
-                    RequestID= evnt.RequestID,
-                    ClientID=subscription.ClientID,
-                    Executed=true,
-                    Error=string.Empty,
-                    ReplyChannel=response.Channel,
-                    Body=Google.Protobuf.ByteString.CopyFrom(response.Body),
-                    Metadata=response.MetaData,
-                    Tags = { response.Tags },
-                    Timestamp=Utility.ToUnixTime(DateTime.Now)
-                }, headers: options.GrpcMetadata, deadline: null, cancellationToken: cancellationToken.Token);
-            }, cancellationToken.Token)
-            .ContinueWith(t =>
-            {
-                if (t.IsFaulted)
-                {
-                    Exception ex = t.Exception!;
-                    while (ex is AggregateException && ex.InnerException != null)
-                        ex = ex.InnerException;
-                    logProvider.LogError("Message {} failed on subscription {}.  Message:{}", evnt.RequestID, ID, ex.Message);
-                    errorRecieved(ex);
-                    client.SendResponse(new Response()
+                    while (channel.Reader.TryRead(out SRecievedMessage<Request> message))
                     {
-                        RequestID=evnt.RequestID,
-                        ClientID=subscription.ClientID,
-                        Executed=true,
-                        Error=ex.Message,
-                        ReplyChannel=evnt.ReplyChannel,
-                        Body=Google.Protobuf.ByteString.Empty,
-                        Timestamp=Utility.ToUnixTime(DateTime.Now)
-                    }, headers: options.GrpcMetadata, deadline: null, cancellationToken: cancellationToken.Token);
+                        logger?.LogTrace("Message recieved {} on RPC subscription {}", message.Data.RequestID, ID);
+                        var msg = incomingFactory.ConvertMessage(logger, message);
+                        if (msg==null)
+                            throw new NullReferenceException(nameof(msg));
+                        else if (msg.Exception!=null)
+                            throw msg.Exception;
+                        TaggedResponse<R>? result = null;
+                        try
+                        {
+                            result = await processMessage(msg);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger?.LogError("Message {} failed on subscription {}.  Message:{}", message.Data.RequestID, ID, ex.Message);
+                            errorRecieved(ex);
+                            client.SendResponse(new Response()
+                            {
+                                RequestID=message.Data.RequestID,
+                                ClientID=subscription.ClientID,
+                                Executed=true,
+                                Error=ex.Message,
+                                ReplyChannel=message.Data.ReplyChannel,
+                                Body=Google.Protobuf.ByteString.Empty,
+                                Timestamp=Utility.ToUnixTime(DateTime.Now)
+                            },
+                            options.GrpcMetadata,
+                            cancellationToken.Token);
+                        }
+                        if (result!=null)
+                        {
+                            var response = outgoingFactory.Response(result.Response, options, subscription.ClientID, message.Data.ReplyChannel, result.Tags);
+                            logger?.LogTrace("Response generated for {} on RPC subscription {}", message.Data.RequestID, ID);
+                            try
+                            {
+                                client.SendResponse(new Response()
+                                {
+                                    CacheHit=false,
+                                    RequestID= message.Data.RequestID,
+                                    ClientID=message.Data.ClientID,
+                                    Executed=true,
+                                    Error=string.Empty,
+                                    ReplyChannel=response.Channel,
+                                    Body=Google.Protobuf.ByteString.CopyFrom(response.Body),
+                                    Metadata=response.MetaData,
+                                    Tags = { response.Tags },
+                                    Timestamp=Utility.ToUnixTime(DateTime.Now)
+                                },
+                                options.GrpcMetadata,
+                                cancellationToken.Token);
+                            }
+                            catch (Exception e)
+                            {
+                                logger?.LogError("Response for {} on RPC subscription {} failed to send", message.Data.RequestID, ID);
+                                errorRecieved(e);
+                            }
+                        }
+                    }
                 }
             });
         }

@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace KubeMQ.Contract.Attributes
+﻿namespace KubeMQ.Contract.Attributes
 {
     /// <summary>
     /// Use this attribute to specify the Channel name used for transmitting this message class.

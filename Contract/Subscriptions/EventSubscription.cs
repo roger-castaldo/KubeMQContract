@@ -3,23 +3,24 @@ using KubeMQ.Contract.Attributes;
 using KubeMQ.Contract.Interfaces;
 using KubeMQ.Contract.Interfaces.Messages;
 using KubeMQ.Contract.SDK;
+using KubeMQ.Contract.SDK.Connection;
 using KubeMQ.Contract.SDK.Grpc;
+using Microsoft.Extensions.Logging;
 using System.Reflection;
 
 namespace KubeMQ.Contract.Subscriptions
 {
-    internal class EventSubscription<T> : SubscriptionBase<EventReceive>
+    internal class EventSubscription<T> : SubscriptionBase<EventReceive> 
     {
         private readonly IMessageFactory<T> messageFactory;
         private readonly KubeSubscription<T> subscription;
-        private readonly Action<IMessage<T>> messageRecieved;
+        private readonly Func<IMessage<T>,Task> messageRecieved;
         private readonly long storageOffset;
         private readonly Subscribe.Types.EventsStoreType eventsStoreStyle;
         private readonly Subscribe.Types.SubscribeType eventType;
-        private readonly bool synchronous;
 
-        public EventSubscription(IMessageFactory<T> messageFactory, KubeSubscription<T> subscription, kubemq.kubemqClient client, ConnectionOptions options, Action<IMessage<T>> messageRecieved, Action<Exception> errorRecieved, long storageOffset, ILogProvider logProvider, MessageReadStyle? messageReadStyle,bool synchronous, CancellationToken cancellationToken)
-            : base(client,options,errorRecieved,logProvider,cancellationToken)
+        public EventSubscription(Guid id,IMessageFactory<T> messageFactory, KubeSubscription<T> subscription, KubeClient client, ConnectionOptions options, Func<IMessage<T>, Task> messageRecieved, Action<Exception> errorRecieved, long storageOffset, ILogger? logger, MessageReadStyle? messageReadStyle,CancellationToken cancellationToken)
+            : base(id,client,options,errorRecieved,logger,cancellationToken)
         {
             messageReadStyle ??= typeof(T).GetCustomAttributes<StoredMessage>().Select(sm => sm.Style).FirstOrDefault();
             this.messageFactory=messageFactory;
@@ -27,7 +28,6 @@ namespace KubeMQ.Contract.Subscriptions
             this.messageRecieved = messageRecieved;
             this.storageOffset = storageOffset;
             this.eventsStoreStyle=(messageReadStyle==null ? Subscribe.Types.EventsStoreType.Undefined : (Subscribe.Types.EventsStoreType)(int)messageReadStyle);
-            this.synchronous=synchronous;
             eventType = Subscribe.Types.SubscribeType.Events;
             if (typeof(T).GetCustomAttributes<StoredMessage>().Any())
                 eventType = Subscribe.Types.SubscribeType.EventsStore;
@@ -35,7 +35,7 @@ namespace KubeMQ.Contract.Subscriptions
 
         protected override AsyncServerStreamingCall<EventReceive> EstablishCall()
         {
-            logProvider.LogTrace("Attempting to establish subscription {} to {} on channel {} for type {}", ID, options.Address, subscription.Channel, Utility.TypeName<T>());
+            logger?.LogTrace("Attempting to establish subscription {} to {} on channel {} for type {}", ID, options.Address, subscription.Channel, Utility.TypeName<T>());
             return client.SubscribeToEvents(new Subscribe()
             {
                 Channel = subscription.Channel,
@@ -46,31 +46,33 @@ namespace KubeMQ.Contract.Subscriptions
                 EventsStoreTypeValue = storageOffset
             },
             options.GrpcMetadata,
-            null, cancellationToken.Token);
+            cancellationToken.Token);
         }
 
-        protected override void ProcessEvent(EventReceive evnt)
+        protected override void EstablishReader()
         {
-            var task = Task.Run(() =>
+            Task.Run(async () =>
             {
-                logProvider.LogTrace("Message recieved {} on subscription {}", evnt.EventID, ID);
-                var msg = messageFactory.ConvertMessage(logProvider, evnt);
-                messageRecieved(msg);
-            }, cancellationToken.Token)
-            .ContinueWith(t =>
-            {
-                if (t.IsFaulted)
+                while (await channel.Reader.WaitToReadAsync(cancellationToken.Token))
                 {
-                    Exception ex = t.Exception!;
-                    while (ex is AggregateException && ex.InnerException != null)
-                        ex = ex.InnerException;
-                    logProvider.LogError("Message {} failed on subscription {}.  Message:{}", evnt.EventID, ID, ex.Message);
-                    errorRecieved(ex);
+                    while (channel.Reader.TryRead(out SRecievedMessage<EventReceive> message))
+                    {
+                        logger?.LogTrace("Message recieved {} on subscription {}", message.Data.EventID, ID);
+                        var msg = messageFactory.ConvertMessage(logger, message);
+                        if (msg.Exception!=null)
+                            throw msg.Exception;
+                        try
+                        {
+                            await messageRecieved(msg);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger?.LogError("Message {} failed on subscription {}.  Message:{}", message.Data.EventID, ID, ex.Message);
+                            errorRecieved(ex);
+                        }
+                    }
                 }
             });
-            if (synchronous)
-                task.Wait();
         }
-
     }
 }

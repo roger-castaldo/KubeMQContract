@@ -1,9 +1,4 @@
 ﻿using KubeMQ.Contract.Interfaces.Messages;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace KubeMQ.Contract.Interfaces.Connections
 {
@@ -37,7 +32,7 @@ namespace KubeMQ.Contract.Interfaces.Connections
         /// <param name="cancellationToken">A cancellation token used to stop the subscription</param>
         /// <returns>A unique ID for this particular subscription that can be used to Unsubscribe</returns>
         Guid SubscribeRPCQuery<T, R>(
-            Func<IMessage<T>, TaggedResponse<R>> processMessage,
+            Func<IMessage<T>, Task<TaggedResponse<R>>> processMessage,
             Action<Exception> errorRecieved,
             string? channel = null,
             string group = "",

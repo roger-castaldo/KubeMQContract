@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace KubeMQ.Contract.Interfaces
+﻿namespace KubeMQ.Contract.Interfaces
 {
     /// <summary>
     /// Represents a Ping Result from the KubeMQ server
     /// </summary>
-    public interface IPingResult
+    public interface IPingResult : IDisposable
     {
         /// <summary>
         /// The name/IP of the host that was pinged
