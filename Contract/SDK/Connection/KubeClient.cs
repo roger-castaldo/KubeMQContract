@@ -1,5 +1,6 @@
 ﻿using Grpc.Core;
 using Grpc.Net.Client;
+using Grpc.Net.Client.Configuration;
 using KubeMQ.Contract.Interfaces;
 using KubeMQ.Contract.SDK.Grpc;
 using Microsoft.Extensions.Logging;
@@ -17,10 +18,26 @@ namespace KubeMQ.Contract.SDK.Connection
     {
         private const int RETRY_COUNT = 5;
 
+        private static readonly ServiceConfig defaultServiceConfig = new()
+        {
+            MethodConfigs={ 
+                new(){
+                    Names={ MethodName.Default },
+                    RetryPolicy=new()
+                    {
+                        MaxAttempts=RETRY_COUNT,
+                        InitialBackoff = TimeSpan.FromSeconds(1),
+                        MaxBackoff = TimeSpan.FromSeconds(5),
+                        BackoffMultiplier = 1.5,
+                        RetryableStatusCodes = { StatusCode.Unavailable}
+                    }
+                }
+            }
+        };
+
         private readonly string address;
         private readonly ChannelCredentials credentials;
         private readonly ILogger? logger;
-        private readonly AutoResetEvent dataLock;
         private GrpcChannel channel;
         private kubemq.kubemqClient client;
         private bool disposedValue;
@@ -32,7 +49,6 @@ namespace KubeMQ.Contract.SDK.Connection
             this.address=address;
             this.credentials = credentials;
             this.logger = logger;
-            dataLock = new AutoResetEvent(true);
             ProduceClient();
         }
 
@@ -47,7 +63,8 @@ namespace KubeMQ.Contract.SDK.Connection
                     KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
                     KeepAlivePingPolicy = HttpKeepAlivePingPolicy.Always,
                     EnableMultipleHttp2Connections = true
-                }
+                },
+                ServiceConfig=defaultServiceConfig
             });
             client = new(channel);
         }
@@ -61,36 +78,21 @@ namespace KubeMQ.Contract.SDK.Connection
         private async Task<R> TryInvoke<R>(Func<Task<R>> call)
         {
             CheckDisposed();
-            var errCount = 0;
             Exception? err = null;
             R? result = default;
-            dataLock.WaitOne();
-            while (errCount<RETRY_COUNT)
+            try
             {
-                try
-                {
-                    result = await call();
-                    break;
-                }
-                catch (RpcException ex)
-                {
-                    err=ex;
-                    logger?.LogError("Error occured on Send in send Message:{}, Status: {}", ex.Message, ex.Status);
-                    if (ex.StatusCode==StatusCode.Unavailable)
-                    {
-                        errCount++;
-                        try { channel.Dispose(); } catch (Exception) { }
-                        try { ProduceClient(); } catch (Exception) { break; }
-                    }
-                    else
-                        break;
-                }catch(Exception ex)
-                {
-                    err=ex;
-                    break;
-                }
+                result = await call();
             }
-            dataLock.Set();
+            catch (RpcException ex)
+            {
+                err=ex;
+                logger.LogError("KubeClient RPC Error[Message:{},Status:{}]", ex.Message, ex.StatusCode);
+            } catch (Exception ex)
+            {
+                err=ex;
+                logger.LogError("KubeClient Error[Message:{}]", ex.Message);
+            }
             if (err!=null)
                 throw err;
             return result!;
@@ -197,9 +199,7 @@ namespace KubeMQ.Contract.SDK.Connection
                 if (disposing)
                 {
                     // TODO: dispose managed state (managed objects)
-                    dataLock.WaitOne();
                     channel.Dispose();
-                    dataLock.Dispose();
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer
