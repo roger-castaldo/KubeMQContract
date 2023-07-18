@@ -16,7 +16,6 @@ var jsonListener = conn.Subscribe<Hello2>(message =>
     {
         System.Diagnostics.Debug.WriteLine($"Delay: {DateTime.Now.Subtract(message.Timestamp).TotalMilliseconds - DateTime.Now.Subtract(message.ConversionTimestamp).TotalMilliseconds} ms");
         Console.WriteLine($"Greetings {message.Data.Salutation} {message.Data.FirstName} {message.Data.LastName}");
-        return Task.CompletedTask;
     },
     error =>
     {
@@ -45,7 +44,6 @@ Console.WriteLine($"Result 2 is Error: {result2.IsError}");
 var protoListener = conn.Subscribe<Hello2>(message =>
     {
         Console.WriteLine($"Greetings {message.Data.Salutation} {message.Data.FirstName} {message.Data.LastName}");
-        return Task.CompletedTask;
     },
     error =>
     {

@@ -17,13 +17,14 @@ namespace KubeMQ.Contract.Subscriptions
         private readonly ConnectionOptions connectionOptions;
         private readonly KubeClient client;
         private readonly string channel;
-        private readonly CancellationTokenSource cancellationToken;
+        public CancellationTokenSource CancellationToken { get; private init; }
         private readonly ILogger? logger;
         private readonly string clientID;
+        private bool disposedValue;
 
         public Guid ID { get; private init; }
 
-        public MessageQueue(Guid id,IMessageFactory<T> messageFactory,ConnectionOptions connectionOptions, KubeClient client, ILogger? logger, string? channel)
+        public MessageQueue(Guid id,IMessageFactory<T> messageFactory,ConnectionOptions connectionOptions, KubeClient client, ILogger? logger, string? channel,CancellationToken cancellationToken)
         {
             ID=id;
             clientID = $"{clientID}_{id}";
@@ -31,15 +32,20 @@ namespace KubeMQ.Contract.Subscriptions
             this.connectionOptions=connectionOptions;
             this.client=client;
             this.logger=logger;
-            this.cancellationToken = new CancellationTokenSource();
+            CancellationToken = new CancellationTokenSource();
             this.channel = channel??typeof(T).GetCustomAttributes<MessageChannel>().Select(mc => mc.Name).FirstOrDefault(String.Empty);
             if (string.IsNullOrEmpty(this.channel))
                 throw new ArgumentNullException(nameof(channel), "message must have a channel value");
             logger?.LogTrace("Establishing Message Queue {} for {}", ID, Utility.TypeName<T>());
 
-            cancellationToken.Token.Register(() =>
+            cancellationToken.Register(() =>
             {
-                client.Dispose();
+                CancellationToken.Cancel();
+            });
+
+            CancellationToken.Token.Register(() =>
+            {
+                this.Dispose();
             });
         }
 
@@ -56,7 +62,7 @@ namespace KubeMQ.Contract.Subscriptions
                     MaxNumberOfMessages = 1,
                     WaitTimeSeconds = PEEK_TIMEOUT_SECONDS,
                     IsPeak = true
-                }, connectionOptions.GrpcMetadata, cancellationToken.Token);
+                }, connectionOptions.GrpcMetadata, CancellationToken.Token);
                 var result = res!=null && !res.IsError && string.IsNullOrEmpty(res.Error)&&res.MessagesReceived>0;
                 logger?.LogTrace("Queue {} HasMore result {}", ID, result);
                 return result;
@@ -74,7 +80,7 @@ namespace KubeMQ.Contract.Subscriptions
                 MaxNumberOfMessages = 1,
                 WaitTimeSeconds = POP_TIMEOUT_SECONDS,
                 IsPeak = true
-            }, connectionOptions.GrpcMetadata, cancellationToken.Token);
+            }, connectionOptions.GrpcMetadata, CancellationToken.Token);
             logger?.LogTrace("Peek results for Queue {} (IsError:{},Error:{},MessagesRecieved:{}", ID, res.IsError, res.Error, res.MessagesReceived);
             if (res!=null && !res.IsError && string.IsNullOrEmpty(res.Error)&&res.MessagesReceived>0)
                 return messageFactory.ConvertMessage(logger,res.Messages.First());
@@ -91,6 +97,11 @@ namespace KubeMQ.Contract.Subscriptions
 
         public IEnumerable<IMessage<T>> Pop(int count)
         {
+            return Pop(count, CancellationToken.Token);
+        }
+
+        internal IEnumerable<IMessage<T>> Pop(int count, CancellationToken cancellationToken)
+        {
             logger?.LogTrace("Popping Queue {}, count {}", ID, count);
             var res = client.ReceiveQueueMessages(new ReceiveQueueMessagesRequest()
             {
@@ -100,17 +111,43 @@ namespace KubeMQ.Contract.Subscriptions
                 MaxNumberOfMessages = count,
                 WaitTimeSeconds = POP_TIMEOUT_SECONDS,
                 IsPeak = false
-            }, connectionOptions.GrpcMetadata, cancellationToken.Token);
+            }, connectionOptions.GrpcMetadata, cancellationToken);
             logger?.LogTrace("Pop results for Queue {} (IsError:{},Error:{},MessagesRecieved:{}", ID, res.IsError, res.Error, res.MessagesReceived);
             if (res!=null && !res.IsError && string.IsNullOrEmpty(res.Error)&&res.MessagesReceived>0)
                 return res.Messages.Select(msg => messageFactory.ConvertMessage(logger,msg));
             return Array.Empty<IMessage<T>>();
         }
 
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    if (!CancellationToken.IsCancellationRequested)
+                        CancellationToken.Cancel();
+                    logger?.LogTrace("Disposing of Queue {}", ID);
+                    client.Dispose();
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+                // TODO: set large fields to null
+                disposedValue=true;
+            }
+        }
+
+        // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+        // ~MessageQueue()
+        // {
+        //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        //     Dispose(disposing: false);
+        // }
+
         public void Dispose()
         {
-            logger?.LogTrace("Disposing of Queue {}", ID);
-            cancellationToken.Cancel();
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }

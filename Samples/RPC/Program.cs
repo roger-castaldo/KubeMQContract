@@ -15,13 +15,13 @@ var listener = conn.SubscribeRPCQuery<Hello2, Greeting>(
     message =>
     {
         System.Diagnostics.Debug.WriteLine($"Delay: {DateTime.Now.Subtract(message.Timestamp).TotalMilliseconds - DateTime.Now.Subtract(message.ConversionTimestamp).TotalMilliseconds} ms");
-        return Task.FromResult(new TaggedResponse<Greeting>()
+        return new TaggedResponse<Greeting>()
         {
             Response=new Greeting()
             {
                 Message=$"Greetings {message.Data.Salutation} {message.Data.FirstName} {message.Data.LastName}"
             }
-        });
+        };
     },
     error =>
     {
@@ -58,18 +58,18 @@ conn.Unsubscribe(listener);
 //Add listener for commands
 var commandConn = opts.EstablishRPCCommandConnection();
 
-commandConn.SubscribeRPCCommand<Hello2>(
+listener = commandConn.SubscribeRPCCommand<Hello2>(
     message =>
     {
         Console.WriteLine($"Greetings {message.Data.Salutation} {message.Data.FirstName} {message.Data.LastName}");
-        return Task.FromResult(new TaggedResponse<bool>()
+        return new TaggedResponse<bool>()
         {
             Response=true,
             Tags = new Dictionary<string, string>()
             {
                 {"Salutation",message.Data.Salutation }
             }
-        });
+        };
     },
     error =>
     {
@@ -99,3 +99,5 @@ Console.WriteLine($"Response 4 : {response4.Response}");
 Console.WriteLine("Tags:");
 foreach (var key in response4.Keys)
     Console.WriteLine($"{key}={response4[key]}");
+
+commandConn.Unsubscribe(listener);

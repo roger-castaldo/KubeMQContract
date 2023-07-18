@@ -56,21 +56,45 @@ namespace KubeMQ.Contract.SDK.Connection
             }
         }
 
-        public Guid Subscribe<T>(Func<KubeMQ.Contract.Interfaces.Messages.IMessage<T>, Task> messageRecieved, Action<Exception> errorRecieved, string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null, CancellationToken cancellationToken = new CancellationToken())
+        public Guid Subscribe<T>(Action<KubeMQ.Contract.Interfaces.Messages.IMessage<T>> messageRecieved, Action<Exception> errorRecieved, string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null, CancellationToken cancellationToken = new CancellationToken())
+            => CreateSubscription<T>(messageRecieved, errorRecieved, channel, group, storageOffset, messageReadStyle, true, cancellationToken);
+
+        public Guid SubscribeAsync<T>(Action<KubeMQ.Contract.Interfaces.Messages.IMessage<T>> messageRecieved, Action<Exception> errorRecieved, string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null, CancellationToken cancellationToken = new CancellationToken())
+            => CreateSubscription<T>(messageRecieved,errorRecieved,channel,group,storageOffset,messageReadStyle,false,cancellationToken);
+
+        private Guid CreateSubscription<T>(
+            Action<KubeMQ.Contract.Interfaces.Messages.IMessage<T>> messageRecieved,
+            Action<Exception> errorRecieved,
+            string? channel,
+            string group,
+            long storageOffset,
+            MessageReadStyle? messageReadStyle,
+            bool synchronous,
+            CancellationToken cancellationToken)
         {
             var id = Guid.NewGuid();
             var sub = RegisterSubscription<EventSubscription<T>>(
                 new EventSubscription<T>(
                     id,
-                    GetMessageFactory<T>(), 
-                    new KubeSubscription<T>(clientID,id, channel: channel, group: group), 
-                    EstablishConnection(), 
+                    GetMessageFactory<T>(),
+                    new KubeSubscription<T>(clientID, id, channel: channel, group: group),
+                    EstablishConnection(),
                     this.connectionOptions,
-                    messageRecieved, 
-                    errorRecieved, 
-                    storageOffset,
-                    ProduceLogger(id), 
+                    new Func<KubeMQ.Contract.Interfaces.Messages.IMessage<T>, Task>(
+                        msg => {
+                            try
+                            {
+                                messageRecieved(msg);
+                                return Task.CompletedTask;
+                            }
+                            catch (Exception) { throw; }
+                        }
+                    ),
+                    errorRecieved,
                     messageReadStyle,
+                    storageOffset,
+                    ProduceLogger(id),
+                    synchronous,
                     cancellationToken)
             );
             Log(LogLevel.Information, "Registered Subscribe {} of type {}", sub.ID, Utility.TypeName<T>());

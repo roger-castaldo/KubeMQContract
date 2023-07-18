@@ -77,3 +77,38 @@ while (queue.HasMore)
 }
 
 conn.Unsubscribe(queue.ID);
+
+var cancelationToken = new CancellationTokenSource();
+
+var stream = conn.SubscribeToQueueAsStream<Hello>(cancellationToken: cancelationToken.Token);
+
+//enqueue multiple messages
+_= await conn.EnqueueMessages<Hello>(new Hello[]
+{
+    new Hello()
+    {
+        FirstName="Bob",
+        LastName="Loblaw"
+    },
+    new Hello()
+    {
+        FirstName="Fred",
+        LastName="Flinestone"
+    },
+    new Hello()
+    {
+        FirstName="Barney",
+        LastName="Rubble"
+    }
+});
+
+var cnt = 0;
+
+await foreach(var message in stream){
+    Console.WriteLine($"Stream Greetings {message.Data.FirstName} {message.Data.LastName}");
+    cnt++;
+    if (cnt==3)
+        cancelationToken.Cancel();
+}
+
+stream.Dispose();

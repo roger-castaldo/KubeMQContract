@@ -12,7 +12,7 @@ namespace KubeMQ.Contract.SDK.Connection
 {
     internal partial class Connection : IQueueConnection
     {
-        public async Task<ITransmissionResult> EnqueueMessage<T>(T message, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, Dictionary<string, string>? tagCollection = null, int? expirationSeconds = null, int? delaySeconds = null, int? maxQueueSize = null, string? maxQueueChannel = null)
+        public async Task<ITransmissionResult> EnqueueMessage<T>(T message, string? channel = null, Dictionary<string, string>? tagCollection = null, int? expirationSeconds = null, int? delaySeconds = null, int? maxQueueSize = null, string? maxQueueChannel = null, CancellationToken cancellationToken = new CancellationToken())
         {
             try
             {
@@ -57,7 +57,7 @@ namespace KubeMQ.Contract.SDK.Connection
             }
         }
 
-        public async Task<IBatchTransmissionResult> EnqueueMessages<T>(IEnumerable<T> messages, CancellationToken cancellationToken = new CancellationToken(), string? channel = null, Dictionary<string, string>? tagCollection = null, int? expirationSeconds = null, int? delaySeconds = null, int? maxQueueSize = null, string? maxQueueChannel = null)
+        public async Task<IBatchTransmissionResult> EnqueueMessages<T>(IEnumerable<T> messages, string? channel = null, Dictionary<string, string>? tagCollection = null, int? expirationSeconds = null, int? delaySeconds = null, int? maxQueueSize = null, string? maxQueueChannel = null, CancellationToken cancellationToken = new CancellationToken())
         {
             try
             {
@@ -120,12 +120,18 @@ namespace KubeMQ.Contract.SDK.Connection
             }
         }
 
-        public IMessageQueue<T> SubscribeToQueue<T>(CancellationToken cancellationToken = default, string? channel = null)
+        public IMessageQueue<T> SubscribeToQueue<T>(string? channel = null, CancellationToken cancellationToken = default)
         {
             Log(LogLevel.Information, "Requesting SubscribeToQueue of type {}", Utility.TypeName<T>());
             var id = Guid.NewGuid();
-            return new MessageQueue<T>(id,GetMessageFactory<T>(), connectionOptions, EstablishConnection(), ProduceLogger(id), channel);
+            return new MessageQueue<T>(id,GetMessageFactory<T>(), connectionOptions, EstablishConnection(), ProduceLogger(id), channel,cancellationToken);
         }
 
+        public IReadonlyMessageStream<T> SubscribeToQueueAsStream<T>(string? channel = null, CancellationToken cancellationToken = default)
+        {
+            Log(LogLevel.Information, "Requesting SubscribeToQueue of type {}", Utility.TypeName<T>());
+            var id = Guid.NewGuid();
+            return new ReadonlyMessageQueueStream<T>(id, GetMessageFactory<T>(), connectionOptions, EstablishConnection(), ProduceLogger(id), channel,cancellationToken);
+        }
     }
 }

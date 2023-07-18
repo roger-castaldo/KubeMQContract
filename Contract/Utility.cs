@@ -11,11 +11,17 @@
         {
             try
             {
-                return DateTimeOffset.FromUnixTimeSeconds(timestamp).DateTime;
+                return DateTimeOffset.FromUnixTimeSeconds(timestamp).DateTime.ToLocalTime();
             }
             catch (Exception)
             {
-                return DateTime.MaxValue;
+                try
+                {
+                    return DateTimeOffset.FromUnixTimeMilliseconds(timestamp/1000000).DateTime.ToLocalTime();
+                }
+                catch (Exception) {
+                    return DateTime.MaxValue;
+                }
             }
         }
 

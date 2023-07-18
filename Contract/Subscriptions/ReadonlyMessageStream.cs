@@ -14,7 +14,7 @@ namespace KubeMQ.Contract.Subscriptions
         private readonly EventSubscription<T> _subscription;
         private readonly Channel<IMessage<T>> _channel;
 
-        public ReadonlyMessageStream(Guid id,IMessageFactory<T> messageFactory, KubeSubscription<T> subscription, KubeClient client, ConnectionOptions options, Action<Exception> errorRecieved, long storageOffset, ILogger? logProvider, MessageReadStyle? messageReadStyle, CancellationToken cancellationToken)
+        public ReadonlyMessageStream(Guid id,IMessageFactory<T> messageFactory, KubeSubscription<T> subscription, KubeClient client, ConnectionOptions options, Action<Exception> errorRecieved, long storageOffset, ILogger? logger, MessageReadStyle? messageReadStyle, CancellationToken cancellationToken)
         {
             ID=id;
             cancellationToken.Register(() => { Stop(); });
@@ -30,7 +30,7 @@ namespace KubeMQ.Contract.Subscriptions
             {
                 errors++;
                 errorRecieved(err);
-            }, storageOffset, logProvider, messageReadStyle,cancellationToken);
+            },messageReadStyle,storageOffset,logger,true,cancellationToken);
         }
 
         protected override void Dispose(bool disposing)

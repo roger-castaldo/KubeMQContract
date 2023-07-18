@@ -20,14 +20,16 @@ namespace KubeMQ.Contract.Subscriptions
         protected readonly ILogger? logger;
         protected readonly Action<Exception> errorRecieved;
         protected readonly Channel<SRecievedMessage<TResponse>> channel;
+        private readonly bool synchronous;
 
-        public SubscriptionBase(Guid id,KubeClient client, ConnectionOptions options, Action<Exception> errorRecieved, ILogger? logger, CancellationToken cancellationToken)
+        public SubscriptionBase(Guid id,KubeClient client, ConnectionOptions options, Action<Exception> errorRecieved, ILogger? logger,bool synchronous, CancellationToken cancellationToken)
         {
             this.ID=id;
             this.client = client;
             this.options = options;
             this.errorRecieved = errorRecieved;
             this.logger=logger;
+            this.synchronous=synchronous;
             this.cancellationToken = new CancellationTokenSource();
             channel = Channel.CreateUnbounded<SRecievedMessage<TResponse>>(new UnboundedChannelOptions()
             {
@@ -51,9 +53,7 @@ namespace KubeMQ.Contract.Subscriptions
         public void Start()
         {
             startEvent = new ManualResetEvent(false);
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             Run();
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             startEvent.WaitOne();
             startEvent.Dispose();
             startEvent = null;
@@ -72,10 +72,11 @@ namespace KubeMQ.Contract.Subscriptions
                         using var call = EstablishCall();
                         startEvent?.Set();
                         logger?.LogTrace("Connection for subscription {} established", ID);
+                        var writer = channel.Writer;
                         await foreach (var resp in call.ResponseStream.ReadAllAsync(cancellationToken.Token))
                         {
                             if (active)
-                                await channel.Writer.WriteAsync(new SRecievedMessage<TResponse>(resp));
+                                await writer.WriteAsync(new SRecievedMessage<TResponse>(resp));
                             else
                                 break;
                         }
@@ -83,23 +84,26 @@ namespace KubeMQ.Contract.Subscriptions
                     }
                     catch (RpcException rpcx)
                     {
-                        switch (rpcx.StatusCode)
+                        if (active && !cancellationToken.IsCancellationRequested)
                         {
-                            case StatusCode.Cancelled:
-                            case StatusCode.PermissionDenied:
-                            case StatusCode.Aborted:
-                                Stop();
-                                break;
-                            case StatusCode.Unknown:
-                            case StatusCode.Unavailable:
-                            case StatusCode.DataLoss:
-                            case StatusCode.DeadlineExceeded:
-                                logger?.LogTrace("RPC Error recieved on subscription {}, retrying connection after delay {}ms.  StatusCode:{},Message:{}", ID, options.ReconnectInterval, rpcx.StatusCode, rpcx.Message);
-                                break;
-                            default:
-                                logger?.LogError("RPC Error recieved on subscription {}.  StatusCode:{},Message:{}", ID, rpcx.StatusCode, rpcx.Message);
-                                errorRecieved(rpcx);
-                                break;
+                            switch (rpcx.StatusCode)
+                            {
+                                case StatusCode.Cancelled:
+                                case StatusCode.PermissionDenied:
+                                case StatusCode.Aborted:
+                                    Stop();
+                                    break;
+                                case StatusCode.Unknown:
+                                case StatusCode.Unavailable:
+                                case StatusCode.DataLoss:
+                                case StatusCode.DeadlineExceeded:
+                                    logger?.LogTrace("RPC Error recieved on subscription {}, retrying connection after delay {}ms.  StatusCode:{},Message:{}", ID, options.ReconnectInterval, rpcx.StatusCode, rpcx.Message);
+                                    break;
+                                default:
+                                    logger?.LogError("RPC Error recieved on subscription {}.  StatusCode:{},Message:{}", ID, rpcx.StatusCode, rpcx.Message);
+                                    errorRecieved(rpcx);
+                                    break;
+                            }
                         }
                     }
                     catch (Exception e)
@@ -113,6 +117,32 @@ namespace KubeMQ.Contract.Subscriptions
             });
         }
 
+        private void EstablishReader()
+        {
+            Task.Run(async () =>
+            {
+                while (await channel.Reader.WaitToReadAsync(cancellationToken.Token))
+                {
+                    while (channel.Reader.TryRead(out SRecievedMessage<TResponse> message))
+                    {
+                        var tsk = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await ProcessMessage(message);
+                            }
+                            catch (Exception e)
+                            {
+                                errorRecieved(e);
+                            }
+                        });
+                        if (synchronous)
+                            await tsk;
+                    }
+                }
+            });
+        }
+
         public void Stop()
         {
             logger?.LogTrace("Stop called for subscription {}", ID);
@@ -121,7 +151,7 @@ namespace KubeMQ.Contract.Subscriptions
         }
 
         protected abstract AsyncServerStreamingCall<TResponse> EstablishCall();
-        protected abstract void EstablishReader();
+        protected abstract Task ProcessMessage(SRecievedMessage<TResponse> message);
 
         protected virtual void Dispose(bool disposing)
         {

@@ -65,12 +65,19 @@ namespace KubeMQ.Contract.SDK.Connection
             }
         }
 
-        public Guid SubscribeRPCQuery<T, R>(
-            Func<Contract.Interfaces.Messages.IMessage<T>, Task<TaggedResponse<R>>> processMessage,
+        public Guid SubscribeRPCQuery<T, R>(Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<R>> processMessage, Action<Exception> errorRecieved, string? channel = null, string group = "", CancellationToken cancellationToken = default)
+            => ProduceRPCQuerySubscription<T, R>(processMessage, errorRecieved, channel, group, true, cancellationToken);
+
+        public Guid SubscribeRPCQueryAsync<T, R>(Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<R>> processMessage, Action<Exception> errorRecieved, string? channel = null, string group = "", CancellationToken cancellationToken = default)
+            => ProduceRPCQuerySubscription<T, R>(processMessage, errorRecieved, channel, group, false, cancellationToken);
+
+        private Guid ProduceRPCQuerySubscription<T, R>(
+            Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<R>> processMessage,
             Action<Exception> errorRecieved,
-            string? channel = null,
-            string group = "",
-            CancellationToken cancellationToken = new CancellationToken()
+            string? channel,
+            string group,
+            bool synchronous,
+            CancellationToken cancellationToken
         )
         {
             var id = Guid.NewGuid();
@@ -82,9 +89,16 @@ namespace KubeMQ.Contract.SDK.Connection
                     new KubeSubscription<T>(clientID, id, channel: channel, group: group),
                     EstablishConnection(),
                     this.connectionOptions, 
-                    processMessage, 
+                    new Func<Contract.Interfaces.Messages.IMessage<T>, Task<TaggedResponse<R>>>(msg =>
+                    {
+                        try
+                        {
+                            return Task.FromResult(processMessage(msg));
+                        }catch(Exception){ throw; }
+                    }), 
                     errorRecieved, 
                     ProduceLogger(id),
+                    synchronous,
                     cancellationToken: cancellationToken
                 )
             );

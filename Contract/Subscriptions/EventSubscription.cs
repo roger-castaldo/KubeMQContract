@@ -19,8 +19,8 @@ namespace KubeMQ.Contract.Subscriptions
         private readonly Subscribe.Types.EventsStoreType eventsStoreStyle;
         private readonly Subscribe.Types.SubscribeType eventType;
 
-        public EventSubscription(Guid id,IMessageFactory<T> messageFactory, KubeSubscription<T> subscription, KubeClient client, ConnectionOptions options, Func<IMessage<T>, Task> messageRecieved, Action<Exception> errorRecieved, long storageOffset, ILogger? logger, MessageReadStyle? messageReadStyle,CancellationToken cancellationToken)
-            : base(id,client,options,errorRecieved,logger,cancellationToken)
+        public EventSubscription(Guid id,IMessageFactory<T> messageFactory, KubeSubscription<T> subscription, KubeClient client, ConnectionOptions options, Func<IMessage<T>, Task> messageRecieved, Action<Exception> errorRecieved, MessageReadStyle? messageReadStyle, long storageOffset, ILogger? logger, bool synchronous, CancellationToken cancellationToken)
+            : base(id,client,options,errorRecieved,logger,synchronous,cancellationToken)
         {
             messageReadStyle ??= typeof(T).GetCustomAttributes<StoredMessage>().Select(sm => sm.Style).FirstOrDefault();
             this.messageFactory=messageFactory;
@@ -49,30 +49,21 @@ namespace KubeMQ.Contract.Subscriptions
             cancellationToken.Token);
         }
 
-        protected override void EstablishReader()
+        protected override async Task ProcessMessage(SRecievedMessage<EventReceive> message)
         {
-            Task.Run(async () =>
+            logger?.LogTrace("Message recieved {} on subscription {}", message.Data.EventID, ID);
+            var msg = messageFactory.ConvertMessage(logger, message);
+            if (msg.Exception!=null)
+                throw msg.Exception;
+            try
             {
-                while (await channel.Reader.WaitToReadAsync(cancellationToken.Token))
-                {
-                    while (channel.Reader.TryRead(out SRecievedMessage<EventReceive> message))
-                    {
-                        logger?.LogTrace("Message recieved {} on subscription {}", message.Data.EventID, ID);
-                        var msg = messageFactory.ConvertMessage(logger, message);
-                        if (msg.Exception!=null)
-                            throw msg.Exception;
-                        try
-                        {
-                            await messageRecieved(msg);
-                        }
-                        catch (Exception ex)
-                        {
-                            logger?.LogError("Message {} failed on subscription {}.  Message:{}", message.Data.EventID, ID, ex.Message);
-                            errorRecieved(ex);
-                        }
-                    }
-                }
-            });
+                await messageRecieved(msg);
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError("Message {} failed on subscription {}.  Message:{}", message.Data.EventID, ID, ex.Message);
+                throw;
+            }
         }
     }
 }

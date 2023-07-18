@@ -71,19 +71,39 @@ namespace KubeMQ.Contract.SDK.Connection
             }
         }
 
-        public Guid SubscribeRPCCommand<T>(Func<Contract.Interfaces.Messages.IMessage<T>, Task<TaggedResponse<bool>>> processMessage, Action<Exception> errorRecieved, string? channel = null, string group = "", CancellationToken cancellationToken = default)
+        public Guid SubscribeRPCCommand<T>(Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<bool>> processMessage, Action<Exception> errorRecieved, string? channel = null, string group = "", CancellationToken cancellationToken = default)
+            => ProduceRPCCommandSubscription<T>(processMessage,errorRecieved,channel,group,true,cancellationToken);
+
+        public Guid SubscribeRPCCommandAsync<T>(Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<bool>> processMessage, Action<Exception> errorRecieved, string? channel = null, string group = "", CancellationToken cancellationToken = default)
+            => ProduceRPCCommandSubscription<T>(processMessage, errorRecieved, channel, group, false, cancellationToken);
+
+        public Guid ProduceRPCCommandSubscription<T>(
+            Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<bool>> processMessage, 
+            Action<Exception> errorRecieved, 
+            string? channel, 
+            string group, 
+            bool synchronous,
+            CancellationToken cancellationToken)
         {
             var id = Guid.NewGuid();
             var sub = RegisterSubscription<RPCCommandSubscription<T>>(
                 new RPCCommandSubscription<T>(
                     id,
-                    GetMessageFactory<T>(), 
-                    new KubeSubscription<T>(clientID,id, channel: channel, group: group),
+                    GetMessageFactory<T>(),
+                    new KubeSubscription<T>(clientID, id, channel: channel, group: group),
                     EstablishConnection(),
-                    this.connectionOptions, 
-                    processMessage, 
-                    errorRecieved, 
+                    this.connectionOptions,
+                    new Func<Contract.Interfaces.Messages.IMessage<T>, Task<TaggedResponse<bool>>>(msg =>
+                    {
+                        try
+                        {
+                            return Task.FromResult(processMessage(msg));
+                        }
+                        catch (Exception) { throw; }
+                    }),
+                    errorRecieved,
                     ProduceLogger(id),
+                    synchronous,
                     cancellationToken: cancellationToken
                  )
             );
