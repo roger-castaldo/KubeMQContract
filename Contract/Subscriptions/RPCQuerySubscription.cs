@@ -54,7 +54,7 @@ namespace KubeMQ.Contract.Subscriptions
             catch (Exception ex)
             {
                 logger?.LogError("Message {} failed on subscription {}.  Message:{}", message.Data.RequestID, ID, ex.Message);
-                client.SendResponse(new Response()
+                await client.SendResponseAsync(new Response()
                 {
                     RequestID=message.Data.RequestID,
                     ClientID=subscription.ClientID,
@@ -74,7 +74,7 @@ namespace KubeMQ.Contract.Subscriptions
                 logger?.LogTrace("Response generated for {} on RPC subscription {}", message.Data.RequestID, ID);
                 try
                 {
-                    client.SendResponse(new Response()
+                    await client.SendResponseAsync(new Response()
                     {
                         CacheHit=false,
                         RequestID= message.Data.RequestID,

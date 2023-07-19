@@ -56,7 +56,7 @@ namespace KubeMQ.Contract.Subscriptions
                 errorRecieved(e);
                 try
                 {
-                    client.SendResponse(new Response()
+                    await client.SendResponseAsync(new Response()
                     {
                         RequestID=message.Data.RequestID,
                         ClientID=subscription.ClientID,
@@ -83,7 +83,7 @@ namespace KubeMQ.Contract.Subscriptions
                     foreach (var tag in result.Tags)
                         tags.Add(tag.Key, tag.Value);
                 }
-                client.SendResponse(new Response()
+                await client.SendResponseAsync(new Response()
                 {
                     CacheHit=false,
                     RequestID= message.Data.RequestID,

@@ -75,7 +75,31 @@ namespace KubeMQ.Contract.SDK.Connection
                 throw new NullReferenceException("Client has already been disposed");
         }
 
-        private async Task<R> TryInvoke<R>(Func<Task<R>> call)
+        private R TryInvoke<R>(Func<R> call)
+        {
+            CheckDisposed();
+            Exception? err = null;
+            R? result = default;
+            try
+            {
+                result = call();
+            }
+            catch (RpcException ex)
+            {
+                err=ex;
+                logger.LogError("KubeClient RPC Error[Message:{},Status:{}]", ex.Message, ex.StatusCode);
+            }
+            catch (Exception ex)
+            {
+                err=ex;
+                logger.LogError("KubeClient Error[Message:{}]", ex.Message);
+            }
+            if (err!=null)
+                throw err;
+            return result!;
+        }
+
+        private async Task<R> TryInvokeAsync<R>(Func<Task<R>> call)
         {
             CheckDisposed();
             Exception? err = null;
@@ -98,99 +122,59 @@ namespace KubeMQ.Contract.SDK.Connection
             return result!;
         }
 
-        internal KubeMQ.Contract.SDK.Grpc.PingResult? Ping()
-        {
-            var tsk = TryInvoke<KubeMQ.Contract.SDK.Grpc.PingResult>(() =>
+        internal KubeMQ.Contract.SDK.Grpc.PingResult Ping()
+            => TryInvoke<KubeMQ.Contract.SDK.Grpc.PingResult>(() =>
             {
-                return Task.FromResult(client.Ping(new Empty()));
+                return client.Ping(new Empty());
             });
-            tsk.Wait();
-            if (tsk.Exception!=null)
-                return null;
-            return tsk.Result;
-        }
 
-        internal async Task<KubeMQ.Contract.SDK.Grpc.SendQueueMessageResult> SendQueueMessageAsync(QueueMessage queueMessage, Metadata headers, CancellationToken cancellationToken)
-        {
-            return await TryInvoke<KubeMQ.Contract.SDK.Grpc.SendQueueMessageResult>(async () =>
+        internal Task<KubeMQ.Contract.SDK.Grpc.SendQueueMessageResult> SendQueueMessageAsync(QueueMessage queueMessage, Metadata headers, CancellationToken cancellationToken)
+            => TryInvokeAsync<KubeMQ.Contract.SDK.Grpc.SendQueueMessageResult>(async () =>
             {
                 return await client.SendQueueMessageAsync(queueMessage, headers: headers, cancellationToken: cancellationToken);
             });
-        }
 
-        internal async Task<KubeMQ.Contract.SDK.Grpc.QueueMessagesBatchResponse> SendQueueMessagesBatchAsync(QueueMessagesBatchRequest queueMessagesBatchRequest, Metadata headers, CancellationToken cancellationToken)
-        {
-            return await TryInvoke<KubeMQ.Contract.SDK.Grpc.QueueMessagesBatchResponse>(async () =>
+        internal Task<KubeMQ.Contract.SDK.Grpc.QueueMessagesBatchResponse> SendQueueMessagesBatchAsync(QueueMessagesBatchRequest queueMessagesBatchRequest, Metadata headers, CancellationToken cancellationToken)
+            => TryInvokeAsync<KubeMQ.Contract.SDK.Grpc.QueueMessagesBatchResponse>(async () =>
             {
                 return await client.SendQueueMessagesBatchAsync(queueMessagesBatchRequest, headers: headers, cancellationToken: cancellationToken);
             });
-        }
 
         internal KubeMQ.Contract.SDK.Grpc.ReceiveQueueMessagesResponse ReceiveQueueMessages(ReceiveQueueMessagesRequest receiveQueueMessagesRequest, Metadata headers, CancellationToken token)
-        {
-            var res = TryInvoke<KubeMQ.Contract.SDK.Grpc.ReceiveQueueMessagesResponse>(() =>
+            => TryInvoke<KubeMQ.Contract.SDK.Grpc.ReceiveQueueMessagesResponse>(() =>
             {
-                return Task.FromResult(client.ReceiveQueueMessages(receiveQueueMessagesRequest, headers: headers, cancellationToken: token));
+                return client.ReceiveQueueMessages(receiveQueueMessagesRequest, headers: headers, cancellationToken: token);
             });
-            res.Wait(CancellationToken.None);
-            if (res.Exception!=null)
-                throw res.Exception;
-            return res.Result;
-        }
 
-        internal async Task<KubeMQ.Contract.SDK.Grpc.Result> SendEventAsync(Event @event, Metadata headers, CancellationToken cancellationToken)
-        {
-            return await TryInvoke<KubeMQ.Contract.SDK.Grpc.Result>(async () =>
+        internal Task<KubeMQ.Contract.SDK.Grpc.Result> SendEventAsync(Event @event, Metadata headers, CancellationToken cancellationToken)
+            =>  TryInvokeAsync<KubeMQ.Contract.SDK.Grpc.Result>(async () =>
             {
                 return await client.SendEventAsync(@event, headers: headers, cancellationToken: cancellationToken);
             });
-        }
 
-        internal async Task<KubeMQ.Contract.SDK.Grpc.Response> SendRequestAsync(Request request, Metadata headers, CancellationToken cancellationToken)
-        {
-            return await TryInvoke<KubeMQ.Contract.SDK.Grpc.Response>(async () =>
+        internal Task<KubeMQ.Contract.SDK.Grpc.Response> SendRequestAsync(Request request, Metadata headers, CancellationToken cancellationToken)
+            => TryInvokeAsync<KubeMQ.Contract.SDK.Grpc.Response>(async () =>
             {
                 return await client.SendRequestAsync(request, headers: headers, cancellationToken: cancellationToken);
             });
-        }
 
         internal AsyncServerStreamingCall<KubeMQ.Contract.SDK.Grpc.Request> SubscribeToRequests(Subscribe subscribe, Metadata headers, CancellationToken cancellationToken)
-        {
-            var res = TryInvoke<AsyncServerStreamingCall<KubeMQ.Contract.SDK.Grpc.Request>>(() =>
+            => TryInvoke<AsyncServerStreamingCall<KubeMQ.Contract.SDK.Grpc.Request>>(() =>
             {
-                return Task.FromResult(client.SubscribeToRequests(subscribe, headers: headers, cancellationToken: cancellationToken));
+                return client.SubscribeToRequests(subscribe, headers: headers, cancellationToken: cancellationToken);
             });
-            res.Wait(CancellationToken.None);
-            if (res.Exception!=null)
-                throw res.Exception;
-            return res.Result;
-        }
 
-        internal void SendResponse(Response response, Metadata headers, CancellationToken cancellationToken)
-        {
-            var res = TryInvoke<int>(() =>
+        internal Task SendResponseAsync(Response response, Metadata headers, CancellationToken cancellationToken)
+            => TryInvokeAsync<Empty>(async () =>
             {
-                client.SendResponse(response, headers: headers, cancellationToken: cancellationToken);
-                return Task.FromResult(0);
-            });
-            res.Wait(CancellationToken.None);
-            if (res.Exception!=null)
-                throw res.Exception;
-            CheckDisposed();
-            
-        }
+                return await client.SendResponseAsync(response, headers: headers, cancellationToken: cancellationToken);
+            });         
 
         internal AsyncServerStreamingCall<EventReceive> SubscribeToEvents(Subscribe subscribe, Metadata headers, CancellationToken cancellationToken)
-        {
-            var res = TryInvoke<AsyncServerStreamingCall<EventReceive>>(() =>
+            => TryInvoke<AsyncServerStreamingCall<EventReceive>>(() =>
             {
-                return Task.FromResult(client.SubscribeToEvents(subscribe, headers: headers, cancellationToken: cancellationToken));
+                return client.SubscribeToEvents(subscribe, headers: headers, cancellationToken: cancellationToken);
             });
-            res.Wait(CancellationToken.None);
-            if (res.Exception!=null)
-                throw res.Exception;
-            return res.Result;
-        }
 
         protected virtual void Dispose(bool disposing)
         {
