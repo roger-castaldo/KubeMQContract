@@ -6,23 +6,20 @@ namespace KubeMQ.Contract.Factories
     internal class MessageHeaders : IMessageHeader
     {
         private bool disposedValue;
+        private IEnumerable<KeyValuePair<string, string>> Values { get; init; }
 
-        public MapField<string, string>? Tags { get; init; }
-
-        public IEnumerable<string> Keys => (Tags==null ? Array.Empty<string>() : Tags.Keys);
-
-        public string? this[string key]
+        public MessageHeaders(IEnumerable<KeyValuePair<string, string>> values,MapField<string,string>? tags)
         {
-            get
-            {
-                string? value = null;
-                if (Tags==null)
-                    return value;
-                Tags.TryGetValue(key, out value);
-                return value;
-            }
+            Values = new Dictionary<string, string>()
+                .Concat(tags==null ? new Dictionary<string, string>() : tags)
+                .Concat(values.Where(pair=>tags==null || !tags.ContainsKey(pair.Key)));
         }
 
+        public IEnumerable<string> Keys => (Values==null ? Array.Empty<string>() : Values.Select(pair=>pair.Key));
+
+        public string? this[string key]
+            => Values.FirstOrDefault(pair=>pair.Key.Equals(key, StringComparison.OrdinalIgnoreCase)).Value;
+        
         protected virtual void Dispose(bool disposing)
         {
             if (!disposedValue)

@@ -15,4 +15,15 @@ namespace KubeMQ.Contract
         internal UnableToConnect()
             : base("Unable to establish connection to the KubeMQ host") { }
     }
+
+    /// <summary>
+    /// Thrown when a RPC Query request has been defined but the response message 
+    /// is not the expected response type and not convertable from it.
+    /// </summary>
+    public class InvalidQueryResponseTypeSpecified : Exception
+    {
+        internal InvalidQueryResponseTypeSpecified(Type type, Type forcedRType)
+            : base($"Unable to define RPC Query as the request type {type.Name} is locked to a response type of {forcedRType.Name}")
+        {}
+    }
 }

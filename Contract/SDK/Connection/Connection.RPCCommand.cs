@@ -71,11 +71,11 @@ namespace KubeMQ.Contract.SDK.Connection
             }
         }
 
-        public Guid SubscribeRPCCommand<T>(Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<bool>> processMessage, Action<Exception> errorRecieved, string? channel = null, string group = "", CancellationToken cancellationToken = default)
-            => ProduceRPCCommandSubscription<T>(processMessage,errorRecieved,channel,group,true,cancellationToken);
+        public Guid SubscribeRPCCommand<T>(Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<bool>> processMessage, Action<Exception> errorRecieved, string? channel = null, string group = "", bool ignoreMessageHeader = false, CancellationToken cancellationToken = default)
+            => ProduceRPCCommandSubscription<T>(processMessage,errorRecieved,channel,group,true,ignoreMessageHeader,cancellationToken);
 
-        public Guid SubscribeRPCCommandAsync<T>(Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<bool>> processMessage, Action<Exception> errorRecieved, string? channel = null, string group = "", CancellationToken cancellationToken = default)
-            => ProduceRPCCommandSubscription<T>(processMessage, errorRecieved, channel, group, false, cancellationToken);
+        public Guid SubscribeRPCCommandAsync<T>(Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<bool>> processMessage, Action<Exception> errorRecieved, string? channel = null, string group = "", bool ignoreMessageHeader = false, CancellationToken cancellationToken = default)
+            => ProduceRPCCommandSubscription<T>(processMessage, errorRecieved, channel, group, false,ignoreMessageHeader, cancellationToken);
 
         public Guid ProduceRPCCommandSubscription<T>(
             Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<bool>> processMessage, 
@@ -83,6 +83,7 @@ namespace KubeMQ.Contract.SDK.Connection
             string? channel, 
             string group, 
             bool synchronous,
+            bool ignoreMessageHeader,
             CancellationToken cancellationToken)
         {
             var id = Guid.NewGuid();

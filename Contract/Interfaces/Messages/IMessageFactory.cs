@@ -15,5 +15,6 @@ namespace KubeMQ.Contract.Interfaces.Messages
         IInternalMessage<T> ConvertMessage(ILogger? logger, SRecievedMessage<Request> msg);
         IInternalMessage<T> ConvertMessage(ILogger? logger, SRecievedMessage<EventReceive> msg);
         IResultMessage<T> ConvertMessage(ILogger? logger, Response msg);
+        bool CanConvertFrom(Type responseType);
     }
 }

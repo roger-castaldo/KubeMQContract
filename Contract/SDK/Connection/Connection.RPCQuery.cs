@@ -1,10 +1,12 @@
 ﻿using Google.Protobuf;
 using Grpc.Core;
+using KubeMQ.Contract.Attributes;
 using KubeMQ.Contract.Interfaces.Connections;
 using KubeMQ.Contract.Messages;
 using KubeMQ.Contract.SDK.Grpc;
 using KubeMQ.Contract.Subscriptions;
 using Microsoft.Extensions.Logging;
+using System.Reflection;
 
 namespace KubeMQ.Contract.SDK.Connection
 {
@@ -14,6 +16,10 @@ namespace KubeMQ.Contract.SDK.Connection
         {
             try
             {
+                var responseFactory = GetMessageFactory<R>();
+                var forcedRType = typeof(T).GetCustomAttribute<RPCQueryResponseType>()?.ResponseType;
+                if (forcedRType!=null && forcedRType!=typeof(R) && !responseFactory.CanConvertFrom(forcedRType))
+                    throw new InvalidQueryResponseTypeSpecified(typeof(T), forcedRType);
                 var msg = GetMessageFactory<T>().Request(message, connectionOptions,clientID, channel, tagCollection, timeout, Request.Types.RequestType.Query);
                 Log(LogLevel.Information, "Sending RPC Message {} of type {}", msg.ID, Utility.TypeName<T>());
                 var res = await client.SendRequestAsync(new Request()
@@ -43,7 +49,7 @@ namespace KubeMQ.Contract.SDK.Connection
                         IsError=true,
                         Error=res.Error
                     };
-                return GetMessageFactory<R>().ConvertMessage(logger, res);
+                return responseFactory.ConvertMessage(logger, res);
             }
             catch (RpcException ex)
             {
@@ -65,11 +71,11 @@ namespace KubeMQ.Contract.SDK.Connection
             }
         }
 
-        public Guid SubscribeRPCQuery<T, R>(Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<R>> processMessage, Action<Exception> errorRecieved, string? channel = null, string group = "", CancellationToken cancellationToken = default)
-            => ProduceRPCQuerySubscription<T, R>(processMessage, errorRecieved, channel, group, true, cancellationToken);
+        public Guid SubscribeRPCQuery<T, R>(Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<R>> processMessage, Action<Exception> errorRecieved, string? channel = null, string group = "", bool ignoreMessageHeader = false, CancellationToken cancellationToken = default)
+            => ProduceRPCQuerySubscription<T, R>(processMessage, errorRecieved, channel, group, true,ignoreMessageHeader, cancellationToken);
 
-        public Guid SubscribeRPCQueryAsync<T, R>(Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<R>> processMessage, Action<Exception> errorRecieved, string? channel = null, string group = "", CancellationToken cancellationToken = default)
-            => ProduceRPCQuerySubscription<T, R>(processMessage, errorRecieved, channel, group, false, cancellationToken);
+        public Guid SubscribeRPCQueryAsync<T, R>(Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<R>> processMessage, Action<Exception> errorRecieved, string? channel = null, string group = "", bool ignoreMessageHeader = false, CancellationToken cancellationToken = default)
+            => ProduceRPCQuerySubscription<T, R>(processMessage, errorRecieved, channel, group, false,ignoreMessageHeader, cancellationToken);
 
         private Guid ProduceRPCQuerySubscription<T, R>(
             Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<R>> processMessage,
@@ -77,15 +83,20 @@ namespace KubeMQ.Contract.SDK.Connection
             string? channel,
             string group,
             bool synchronous,
+            bool ignoreMessageHeader,
             CancellationToken cancellationToken
         )
         {
+            var responseFactory = GetMessageFactory<R>();
+            var forcedRType = typeof(T).GetCustomAttribute<RPCQueryResponseType>()?.ResponseType;
+            if (forcedRType!=null && forcedRType!=typeof(R) && !responseFactory.CanConvertFrom(forcedRType))
+                throw new InvalidQueryResponseTypeSpecified(typeof(T),forcedRType);
             var id = Guid.NewGuid();
             var sub = RegisterSubscription<RPCQuerySubscription<T, R>>(
                 new RPCQuerySubscription<T, R>(
                     id,
-                    GetMessageFactory<T>(), 
-                    GetMessageFactory<R>(), 
+                    GetMessageFactory<T>(ignoreMessageHeader), 
+                    responseFactory, 
                     new KubeSubscription<T>(clientID, id, channel: channel, group: group),
                     EstablishConnection(),
                     this.connectionOptions, 

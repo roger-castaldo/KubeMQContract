@@ -17,9 +17,10 @@ using static KubeMQ.Contract.SDK.Grpc.Request.Types;
 
 namespace KubeMQ.Contract.Factories
 {
-    internal class TypeFactory<T>:IMessageFactory<T>,IConversionPath<T>
+    internal class TypeFactory<T>:IMessageFactory<T>,IConversionPath<T>,ITypeFactory
     {
         private static readonly Regex regMetaData = new(@"^(U|C)-(.+)-((\d+\.)*(\d+))$", RegexOptions.Compiled,TimeSpan.FromMilliseconds(200));
+        private static readonly Regex headerRegex = new Regex("\r\n([^:]+):\\s*([^\r]+)\r\n", RegexOptions.Compiled|RegexOptions.ECMAScript, TimeSpan.FromMilliseconds(200));
 
         private readonly IGlobalMessageEncoder? globalMessageEncoder;
         private readonly IGlobalMessageEncryptor? globalMessageEncryptor;
@@ -27,27 +28,33 @@ namespace KubeMQ.Contract.Factories
         private readonly IMessageEncryptor<T> messageEncryptor;
         private readonly IEnumerable<IConversionPath<T>> converters;
 
+        public bool IgnoreMessageHeader { get; private init; }
+
         private readonly string messageName = typeof(T).GetCustomAttributes<MessageName>().Select(mn => mn.Value).FirstOrDefault(Utility.TypeName<T>());
         private readonly string messageVersion = typeof(T).GetCustomAttributes<MessageVersion>().Select(mc => mc.Version.ToString()).FirstOrDefault("0.0.0.0");
         private readonly string messageChannel = typeof(T).GetCustomAttributes<MessageChannel>().Select(mc => mc.Name).FirstOrDefault(string.Empty);
         private readonly bool stored = typeof(T).GetCustomAttributes<StoredMessage>().FirstOrDefault() != null;
         private readonly int requestTimeout = typeof(T).GetCustomAttributes<MessageResponseTimeout>().Select(mrt => mrt.Value).FirstOrDefault(5000);
 
-        public TypeFactory(IGlobalMessageEncoder? globalMessageEncoder, IGlobalMessageEncryptor? globalMessageEncryptor)
+        public TypeFactory(IGlobalMessageEncoder? globalMessageEncoder, IGlobalMessageEncryptor? globalMessageEncryptor, bool ignoreMessageHeader)
         {
             this.globalMessageEncoder = globalMessageEncoder;
             this.globalMessageEncryptor = globalMessageEncryptor;
+            IgnoreMessageHeader=ignoreMessageHeader;
             var types = AssemblyLoadContext.All
                 .SelectMany(context => context.Assemblies)
                 .SelectMany(assembly => assembly.GetTypes())
-                .Where(t=>!t.IsInterface && !t.IsAbstract);
+                .Where(t => !t.IsInterface && !t.IsAbstract);
             messageEncoder = (IMessageEncoder<T>)Activator.CreateInstance(types
-                .FirstOrDefault(type => type.GetInterfaces().Any(iface => iface==typeof(IMessageEncoder<T>)),typeof(JsonEncoder<T>))
+                .FirstOrDefault(type => type.GetInterfaces().Any(iface => iface==typeof(IMessageEncoder<T>)), typeof(JsonEncoder<T>))
                 )!;
             messageEncryptor = (IMessageEncryptor<T>)Activator.CreateInstance(types
-                .FirstOrDefault(type => type.GetInterfaces().Any(iface => iface==typeof(IMessageEncryptor<T>)),typeof(NonEncryptor<T>))
+                .FirstOrDefault(type => type.GetInterfaces().Any(iface => iface==typeof(IMessageEncryptor<T>)), typeof(NonEncryptor<T>))
                 )!;
-            converters = TraceConverters(typeof(T), globalMessageEncoder, globalMessageEncryptor, types,Array.Empty<object>(), Array.Empty<IConversionPath<T>>());
+            if (IgnoreMessageHeader)
+                converters = Array.Empty<IConversionPath<T>>();
+            else
+                converters = TraceConverters(typeof(T), globalMessageEncoder, globalMessageEncryptor, types, Array.Empty<object>(), Array.Empty<IConversionPath<T>>());
         }
 
         private static IEnumerable<IConversionPath<T>> TraceConverters(Type destinationType, IGlobalMessageEncoder? globalMessageEncoder, IGlobalMessageEncryptor? globalMessageEncryptor, IEnumerable<Type> types,IEnumerable<object> curPath, IEnumerable<IConversionPath<T>> converters)
@@ -81,6 +88,16 @@ namespace KubeMQ.Contract.Factories
         {
             isCompressed=false;
             var match = regMetaData.Match(metaData);
+            if (!match.Success)
+            {
+                var headerKey = t.GetCustomAttribute<UsesHttpSource>()?.MessageTypeHeader;
+                if (headerKey!=null)
+                {
+                    var m = headerRegex.Matches(metaData).FirstOrDefault(m => m.Groups[1].Value.Equals(headerKey, StringComparison.InvariantCultureIgnoreCase));
+                    if (m!=null)
+                        match=regMetaData.Match(m.Groups[2].Value.Trim());
+                }
+            }
             if (match.Success)
             {
                 isCompressed=match.Groups[1].Value=="C";
@@ -96,10 +113,12 @@ namespace KubeMQ.Contract.Factories
 
         private T ConvertData(ILogger? logger, string metaData, ByteString body, MapField<string, string>? tags)
         {
-            if (metaData==null)
+            if (!IgnoreMessageHeader && metaData==null)
                 throw new ArgumentNullException(nameof(metaData));
             IConversionPath<T>? converter = null;
-            if (IsMessageTypeMatch(metaData, typeof(T), out bool compressed))
+            bool compressed = false;
+            var headerKey = typeof(T).GetCustomAttribute<UsesHttpSource>()?.MessageTypeHeader;
+            if (IgnoreMessageHeader || IsMessageTypeMatch(metaData, typeof(T), out compressed))
                 converter = this;
             else
             {
@@ -107,6 +126,7 @@ namespace KubeMQ.Contract.Factories
                 {
                     if (IsMessageTypeMatch(metaData, conv.GetType().GetGenericArguments()[0], out compressed))
                     {
+                        headerKey=conv.GetType().GetGenericArguments()[0].GetCustomAttribute<UsesHttpSource>()?.MessageTypeHeader;
                         converter=conv;
                         break;
                     }
@@ -115,7 +135,13 @@ namespace KubeMQ.Contract.Factories
             if (converter==null)
                 throw new InvalidCastException();
             var stream = (compressed ? (Stream)new GZipStream(new MemoryStream(body.ToByteArray()), System.IO.Compression.CompressionMode.Decompress) : (Stream)new MemoryStream(body.ToByteArray()));
-            var result = converter.ConvertMessage(logger, stream, new MessageHeaders() { Tags=tags });
+            var result = converter.ConvertMessage(logger, stream, new MessageHeaders(
+                (metaData==null ? Array.Empty<KeyValuePair<string,string>>() : 
+                    headerRegex.Matches(metaData)
+                    .Where(m => headerKey==null || !m.Groups[1].Value.Equals(headerKey,StringComparison.InvariantCultureIgnoreCase))
+                    .Select(m=>new KeyValuePair<string, string>(m.Groups[1].Value, m.Groups[2].Value))
+                ),
+                tags));
             if (result==null)
                 throw new NullReferenceException(nameof(result));
             return result;
@@ -322,5 +348,11 @@ namespace KubeMQ.Contract.Factories
                 };
             }
         }
+
+        public bool CanConvertFrom(Type responseType)
+            => converters.Any(con => con.CanConvert(responseType));
+
+        public bool CanConvert(Type sourceType)
+            => CanConvertFrom(sourceType);
     }
 }

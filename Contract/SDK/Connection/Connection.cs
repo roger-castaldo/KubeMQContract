@@ -24,7 +24,7 @@ namespace KubeMQ.Contract.SDK.Connection
         private KubeClient client;
         private readonly List<IMessageSubscription> subscriptions;
         private readonly ReaderWriterLockSlim dataLock = new();
-        private IEnumerable<object> typeFactories;
+        private IEnumerable<ITypeFactory> typeFactories;
         private readonly string addy;
         private readonly ILogger? logger;
 
@@ -49,7 +49,7 @@ namespace KubeMQ.Contract.SDK.Connection
                     addy = $"http://{match.Groups[2].Value}";
             }
             subscriptions = new();
-            typeFactories = Array.Empty<object>();
+            typeFactories = Array.Empty<ITypeFactory>();
             dataLock.EnterWriteLock();
             try
             {
@@ -85,17 +85,17 @@ namespace KubeMQ.Contract.SDK.Connection
             return client;
         }
 
-        private IMessageFactory<T> GetMessageFactory<T>() 
+        private IMessageFactory<T> GetMessageFactory<T>(bool ignoreMessageHeader=false) 
         {
             dataLock.EnterReadLock();
             var result = (IMessageFactory<T>?)typeFactories.FirstOrDefault(fact => fact.GetType().GetGenericArguments()[0]==typeof(T));
             dataLock.ExitReadLock();
             if (result==null)
             {
-                result = new TypeFactory<T>(globalMessageEncoder,globalMessageEncryptor);
+                result = new TypeFactory<T>(globalMessageEncoder,globalMessageEncryptor,ignoreMessageHeader);
                 dataLock.EnterWriteLock();
-                if (!typeFactories.Any(fact => fact.GetType().GetGenericArguments()[0]==typeof(T)))
-                    typeFactories = typeFactories.Append(result);
+                if (!typeFactories.Any(fact => fact.GetType().GetGenericArguments()[0]==typeof(T) && fact.IgnoreMessageHeader==ignoreMessageHeader))
+                    typeFactories = typeFactories.Concat(new ITypeFactory[] { (ITypeFactory)result });
                 dataLock.ExitWriteLock();
             }
             return result;

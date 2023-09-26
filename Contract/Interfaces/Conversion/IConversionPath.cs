@@ -6,5 +6,6 @@ namespace KubeMQ.Contract.Interfaces.Conversion
     internal interface IConversionPath<T>
     {
         T? ConvertMessage(ILogger? logger, Stream stream,IMessageHeader messageHeader);
+        bool CanConvert(Type sourceType);
     }
 }

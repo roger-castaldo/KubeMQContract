@@ -120,18 +120,18 @@ namespace KubeMQ.Contract.SDK.Connection
             }
         }
 
-        public IMessageQueue<T> SubscribeToQueue<T>(string? channel = null, CancellationToken cancellationToken = default)
+        public IMessageQueue<T> SubscribeToQueue<T>(string? channel = null, bool ignoreMessageHeader = false, CancellationToken cancellationToken = default)
         {
             Log(LogLevel.Information, "Requesting SubscribeToQueue of type {}", Utility.TypeName<T>());
             var id = Guid.NewGuid();
-            return new MessageQueue<T>(id,GetMessageFactory<T>(), connectionOptions, EstablishConnection(), ProduceLogger(id), channel,cancellationToken);
+            return new MessageQueue<T>(id,GetMessageFactory<T>(ignoreMessageHeader), connectionOptions, EstablishConnection(), ProduceLogger(id), channel,cancellationToken);
         }
 
-        public IReadonlyMessageStream<T> SubscribeToQueueAsStream<T>(string? channel = null, CancellationToken cancellationToken = default)
+        public IReadonlyMessageStream<T> SubscribeToQueueAsStream<T>(string? channel = null, bool ignoreMessageHeader = false, CancellationToken cancellationToken = default)
         {
             Log(LogLevel.Information, "Requesting SubscribeToQueue of type {}", Utility.TypeName<T>());
             var id = Guid.NewGuid();
-            return new ReadonlyMessageQueueStream<T>(id, GetMessageFactory<T>(), connectionOptions, EstablishConnection(), ProduceLogger(id), channel,cancellationToken);
+            return new ReadonlyMessageQueueStream<T>(id, GetMessageFactory<T>(ignoreMessageHeader), connectionOptions, EstablishConnection(), ProduceLogger(id), channel,cancellationToken);
         }
     }
 }

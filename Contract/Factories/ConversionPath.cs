@@ -55,5 +55,8 @@ namespace KubeMQ.Contract.Factories
                 .GetMethod("Convert")!
                 .Invoke(converter, new object[] { source });
         }
+
+        public bool CanConvert(Type sourceType)
+            => sourceType==typeof(T);
     }
 }

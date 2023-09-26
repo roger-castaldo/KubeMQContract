@@ -16,7 +16,12 @@ namespace KubeMQ.Contract.Interfaces.Connections
         /// <param name="tagCollection">A set of key value pairs to me transmitted as headers attached to the message</param>
         /// <param name="cancellationToken">A cancellation token to allow for cancelling the tranmission</param>
         /// <returns>A transmission result indicating the message id and or errors if an error occured</returns>
-        Task<ITransmissionResult> Send<T>(T message, string? channel = null, Dictionary<string, string>? tagCollection = null, CancellationToken cancellationToken = new CancellationToken());
+        Task<ITransmissionResult> Send<T>(
+            T message, 
+            string? channel = null, 
+            Dictionary<string, string>? tagCollection = null, 
+            CancellationToken cancellationToken = new CancellationToken()
+        );
 
         /// <summary>
         /// Called to create a subscription to a Pub/Sub style Event channel where messages are processed
@@ -29,6 +34,8 @@ namespace KubeMQ.Contract.Interfaces.Connections
         /// <param name="group">The name of a group to be subscribed as, this is used if there is more than one instance of a listener (multiple pods).  The messages will be round robined inside each group.</param>
         /// <param name="storageOffset">A supplied value if there is a messageReadStyle specified that requires an X number</param>
         /// <param name="messageReadStyle">A specific read style, will override the StoredMessage property, if the Channel being subscribed to has storage.</param>
+        /// <param name="ignoreMessageHeader">If set to true, the library will ignore the message header which is used to tag the message type.  This will ignore all conversion attempts 
+        /// and simply decode the message under the assumption that it is of type T</param>
         /// <param name="cancellationToken">A cancellation token used to stop the subscription</param>
         /// <returns>A unique ID for this particular subscription that can be used to Unsubscribe</returns>
         Guid Subscribe<T>(
@@ -38,7 +45,9 @@ namespace KubeMQ.Contract.Interfaces.Connections
             string group = "",
             long storageOffset = 0,
             MessageReadStyle? messageReadStyle = null,
-            CancellationToken cancellationToken = new CancellationToken());
+            bool ignoreMessageHeader=false,
+            CancellationToken cancellationToken = new CancellationToken()
+        );
 
         /// <summary>
         /// Called to create a subscription to a Pub/Sub style Event channel where messages are processed
@@ -51,6 +60,8 @@ namespace KubeMQ.Contract.Interfaces.Connections
         /// <param name="group">The name of a group to be subscribed as, this is used if there is more than one instance of a listener (multiple pods).  The messages will be round robined inside each group.</param>
         /// <param name="storageOffset">A supplied value if there is a messageReadStyle specified that requires an X number</param>
         /// <param name="messageReadStyle">A specific read style, will override the StoredMessage property, if the Channel being subscribed to has storage.</param>
+        /// <param name="ignoreMessageHeader">If set to true, the library will ignore the message header which is used to tag the message type.  This will ignore all conversion attempts 
+        /// and simply decode the message under the assumption that it is of type T</param>
         /// <param name="cancellationToken">A cancellation token used to stop the subscription</param>
         /// <returns>A unique ID for this particular subscription that can be used to Unsubscribe</returns>
         Guid SubscribeAsync<T>(
@@ -60,6 +71,8 @@ namespace KubeMQ.Contract.Interfaces.Connections
             string group = "",
             long storageOffset = 0,
             MessageReadStyle? messageReadStyle = null,
-            CancellationToken cancellationToken = new CancellationToken());
+            bool ignoreMessageHeader=false,
+            CancellationToken cancellationToken = new CancellationToken()
+        );
     }
 }

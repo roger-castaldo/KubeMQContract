@@ -56,11 +56,11 @@ namespace KubeMQ.Contract.SDK.Connection
             }
         }
 
-        public Guid Subscribe<T>(Action<KubeMQ.Contract.Interfaces.Messages.IMessage<T>> messageRecieved, Action<Exception> errorRecieved, string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null, CancellationToken cancellationToken = new CancellationToken())
-            => CreateSubscription<T>(messageRecieved, errorRecieved, channel, group, storageOffset, messageReadStyle, true, cancellationToken);
+        public Guid Subscribe<T>(Action<KubeMQ.Contract.Interfaces.Messages.IMessage<T>> messageRecieved, Action<Exception> errorRecieved, string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null,bool ignoreMessageHeader=false, CancellationToken cancellationToken = new CancellationToken())
+            => CreateSubscription<T>(messageRecieved, errorRecieved, channel, group, storageOffset, messageReadStyle, true,ignoreMessageHeader, cancellationToken);
 
-        public Guid SubscribeAsync<T>(Action<KubeMQ.Contract.Interfaces.Messages.IMessage<T>> messageRecieved, Action<Exception> errorRecieved, string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null, CancellationToken cancellationToken = new CancellationToken())
-            => CreateSubscription<T>(messageRecieved,errorRecieved,channel,group,storageOffset,messageReadStyle,false,cancellationToken);
+        public Guid SubscribeAsync<T>(Action<KubeMQ.Contract.Interfaces.Messages.IMessage<T>> messageRecieved, Action<Exception> errorRecieved, string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null, bool ignoreMessageHeader = false, CancellationToken cancellationToken = new CancellationToken())
+            => CreateSubscription<T>(messageRecieved,errorRecieved,channel,group,storageOffset,messageReadStyle,false,ignoreMessageHeader,cancellationToken);
 
         private Guid CreateSubscription<T>(
             Action<KubeMQ.Contract.Interfaces.Messages.IMessage<T>> messageRecieved,
@@ -70,13 +70,14 @@ namespace KubeMQ.Contract.SDK.Connection
             long storageOffset,
             MessageReadStyle? messageReadStyle,
             bool synchronous,
+            bool ignoreMessageHeader,
             CancellationToken cancellationToken)
         {
             var id = Guid.NewGuid();
             var sub = RegisterSubscription<EventSubscription<T>>(
                 new EventSubscription<T>(
                     id,
-                    GetMessageFactory<T>(),
+                    GetMessageFactory<T>(ignoreMessageHeader),
                     new KubeSubscription<T>(clientID, id, channel: channel, group: group),
                     EstablishConnection(),
                     this.connectionOptions,
