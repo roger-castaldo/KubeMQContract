@@ -1,6 +1,4 @@
-﻿using KubeMQ.Contract.Interfaces;
-using KubeMQ.Contract.SDK.Grpc;
-using KubeMQ.Contract.SDK;
+﻿using KubeMQ.Contract.SDK;
 using System.Threading.Channels;
 using KubeMQ.Contract.Interfaces.Messages;
 using KubeMQ.Contract.SDK.Connection;

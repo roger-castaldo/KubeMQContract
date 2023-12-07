@@ -1,6 +1,5 @@
 ﻿using Grpc.Core;
 using KubeMQ.Contract.Attributes;
-using KubeMQ.Contract.Interfaces;
 using KubeMQ.Contract.Interfaces.Messages;
 using KubeMQ.Contract.SDK;
 using KubeMQ.Contract.SDK.Connection;

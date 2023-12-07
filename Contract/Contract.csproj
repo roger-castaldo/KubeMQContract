@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-	  <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
+	  <TargetFrameworks>net6.0;net7.0;net8.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>KubeMQ.Contract</RootNamespace>
@@ -24,9 +24,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.Protobuf" Version="3.23.4" />
-    <PackageReference Include="Grpc.Net.Client" Version="2.55.0" />
-    <PackageReference Include="Grpc.Tools" Version="2.56.0">
+    <PackageReference Include="Google.Protobuf" Version="3.25.1" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.59.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.59.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
@@ -47,7 +47,7 @@
 	    <PackageReadmeFile>README.md</PackageReadmeFile>
 	    <Title>KubeMQ Contract</Title>
 	    <PackageId>KubeMQContract</PackageId>
-	    <AssemblyVersion>1.5.1</AssemblyVersion>
+	    <AssemblyVersion>1.6.0</AssemblyVersion>
 	    <FileVersion>$(AssemblyVersion)</FileVersion>
 	    <Version>$(AssemblyVersion)</Version>
 	    <AssemblyName>KubeMQContract</AssemblyName>

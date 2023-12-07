@@ -1,13 +1,9 @@
 ﻿using Grpc.Core;
-using Grpc.Net.Client;
 using KubeMQ.Contract.Factories;
 using KubeMQ.Contract.Interfaces;
 using KubeMQ.Contract.Interfaces.Connections;
 using KubeMQ.Contract.Interfaces.Messages;
-using KubeMQ.Contract.SDK.Grpc;
 using Microsoft.Extensions.Logging;
-using System.IO;
-using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
 namespace KubeMQ.Contract.SDK.Connection
@@ -21,7 +17,7 @@ namespace KubeMQ.Contract.SDK.Connection
         private readonly ConnectionOptions connectionOptions;
         private readonly IGlobalMessageEncoder? globalMessageEncoder;
         private readonly IGlobalMessageEncryptor? globalMessageEncryptor;
-        private KubeClient client;
+        private readonly KubeClient client;
         private readonly List<IMessageSubscription> subscriptions;
         private readonly ReaderWriterLockSlim dataLock = new();
         private IEnumerable<ITypeFactory> typeFactories;
@@ -73,9 +69,7 @@ namespace KubeMQ.Contract.SDK.Connection
         private KubeClient EstablishConnection()
         {
             var client = new KubeClient(addy, connectionOptions.SSLCredentials??ChannelCredentials.Insecure,logger);
-            var pingResult = Ping(client);
-            if (pingResult ==null)
-                throw new UnableToConnect();
+            var pingResult = Ping(client)??throw new UnableToConnect();
             Log(LogLevel.Debug, "Established connection to [Host:{}, Version:{}, StartTime:{}, UpTime:{}]",
                 pingResult.Host,
                 pingResult.Version,
