@@ -8,35 +8,28 @@ namespace KubeMQ.Contract.Factories
     internal class ConversionPath<T,V> : IConversionPath<V> 
     {
         private readonly IEnumerable<object> path;
-        private readonly IMessageEncoder<T> messageEncoder;
-        private readonly IMessageEncryptor<T> messageEncryptor;
-        private readonly IGlobalMessageEncoder? globalMessageEncoder;
-        private readonly IGlobalMessageEncryptor? globalMessageEncryptor;
+        private readonly IMessageTypeEncoder<T> messageEncoder;
+        private readonly IMessageTypeEncryptor<T> messageEncryptor;
+        private readonly IMessageEncoder? globalMessageEncoder;
+        private readonly IMessageEncryptor? globalMessageEncryptor;
 
-        public ConversionPath(IEnumerable<object> path,IEnumerable<Type> types, IGlobalMessageEncoder? globalMessageEncoder, IGlobalMessageEncryptor? globalMessageEncryptor)
+        public ConversionPath(IEnumerable<object> path,IEnumerable<Type> types, IMessageEncoder? globalMessageEncoder, IMessageEncryptor? globalMessageEncryptor)
         {
             this.path = path;
             this.globalMessageEncoder = globalMessageEncoder;
             this.globalMessageEncryptor = globalMessageEncryptor;
-            messageEncoder = (IMessageEncoder<T>)Activator.CreateInstance(types
-                .FirstOrDefault(type => type.GetInterfaces().Any(iface => iface==typeof(IMessageEncoder<T>)), typeof(JsonEncoder<T>))
+            messageEncoder = (IMessageTypeEncoder<T>)Activator.CreateInstance(types
+                .FirstOrDefault(type => type.GetInterfaces().Any(iface => iface==typeof(IMessageTypeEncoder<T>)), typeof(JsonEncoder<T>))
                 )!;
-            messageEncryptor = (IMessageEncryptor<T>)Activator.CreateInstance(types
-                .FirstOrDefault(type => type.GetInterfaces().Any(iface => iface==typeof(IMessageEncryptor<T>)), typeof(NonEncryptor<T>))
+            messageEncryptor = (IMessageTypeEncryptor<T>)Activator.CreateInstance(types
+                .FirstOrDefault(type => type.GetInterfaces().Any(iface => iface==typeof(IMessageTypeEncryptor<T>)), typeof(NonEncryptor<T>))
                 )!;
         }
 
         public V? ConvertMessage(ILogger? logger, Stream stream, IMessageHeader messageHeader)
         {
-            if (globalMessageEncryptor!=null && messageEncryptor is NonEncryptor<T>)
-                stream=globalMessageEncryptor.Decrypt(stream, messageHeader);
-            else
-                stream = messageEncryptor.Decrypt(stream, messageHeader);
-            object? result;
-            if (globalMessageEncoder!=null && messageEncoder is JsonEncoder<T>)
-                result =  globalMessageEncoder.Decode<T>(stream);
-            else
-                result = messageEncoder.Decode(stream);
+            stream = (globalMessageEncryptor!=null && messageEncryptor is NonEncryptor<T> ? globalMessageEncryptor : messageEncryptor).Decrypt(stream, messageHeader);
+            object? result = (globalMessageEncoder!=null && messageEncoder is JsonEncoder<T>? globalMessageEncoder.Decode<T>(stream):messageEncoder.Decode(stream));
             foreach (var converter in path)
             {
                 logger?.LogTrace("Attempting to convert {} to {} through converters for {}", Utility.TypeName<T>(), Utility.TypeName<V>(), Utility.TypeName(ExtractGenericArguements(converter.GetType())[0]));

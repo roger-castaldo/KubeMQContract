@@ -84,7 +84,7 @@ namespace KubeMQ.Contract
         /// <param name="globalMessageEncryptor">If desired, an encryptor can be specified here and will be used to secure the message bodies as the default.  
         /// A type specific encryptor can be specified to override this for that particular type of message.</param>
         /// <returns></returns>
-        public IConnection EstablishConnection(IGlobalMessageEncoder? globalMessageEncoder=null,IGlobalMessageEncryptor? globalMessageEncryptor=null)
+        public IConnection EstablishConnection(IMessageEncoder? globalMessageEncoder=null,IMessageEncryptor? globalMessageEncryptor=null)
         {
             return new Connection(this,globalMessageEncoder,globalMessageEncryptor);
         }
@@ -97,7 +97,7 @@ namespace KubeMQ.Contract
         /// <param name="globalMessageEncryptor">If desired, an encryptor can be specified here and will be used to secure the message bodies as the default.  
         /// A type specific encryptor can be specified to override this for that particular type of message.</param>
         /// <returns></returns>
-        public IPubSubConnection EstablishPubSubConnection(IGlobalMessageEncoder? globalMessageEncoder = null, IGlobalMessageEncryptor? globalMessageEncryptor = null)
+        public IPubSubConnection EstablishPubSubConnection(IMessageEncoder? globalMessageEncoder = null, IMessageEncryptor? globalMessageEncryptor = null)
         {
             return new Connection(this, globalMessageEncoder, globalMessageEncryptor);
         }
@@ -110,7 +110,7 @@ namespace KubeMQ.Contract
         /// <param name="globalMessageEncryptor">If desired, an encryptor can be specified here and will be used to secure the message bodies as the default.  
         /// A type specific encryptor can be specified to override this for that particular type of message.</param>
         /// <returns></returns>
-        public IPubSubStreamConnection EstablishPubSubStreamConnection(IGlobalMessageEncoder? globalMessageEncoder = null, IGlobalMessageEncryptor? globalMessageEncryptor = null)
+        public IPubSubStreamConnection EstablishPubSubStreamConnection(IMessageEncoder? globalMessageEncoder = null, IMessageEncryptor? globalMessageEncryptor = null)
         {
             return new Connection(this, globalMessageEncoder, globalMessageEncryptor);
         }
@@ -123,7 +123,7 @@ namespace KubeMQ.Contract
         /// <param name="globalMessageEncryptor">If desired, an encryptor can be specified here and will be used to secure the message bodies as the default.  
         /// A type specific encryptor can be specified to override this for that particular type of message.</param>
         /// <returns></returns>
-        public IRPCQueryConnection EstablishRPCQueryConnection(IGlobalMessageEncoder? globalMessageEncoder = null, IGlobalMessageEncryptor? globalMessageEncryptor = null)
+        public IRPCQueryConnection EstablishRPCQueryConnection(IMessageEncoder? globalMessageEncoder = null, IMessageEncryptor? globalMessageEncryptor = null)
         {
             return new Connection(this, globalMessageEncoder, globalMessageEncryptor);
         }
@@ -136,7 +136,7 @@ namespace KubeMQ.Contract
         /// <param name="globalMessageEncryptor">If desired, an encryptor can be specified here and will be used to secure the message bodies as the default.  
         /// A type specific encryptor can be specified to override this for that particular type of message.</param>
         /// <returns></returns>
-        public IRPCCommandConnection EstablishRPCCommandConnection(IGlobalMessageEncoder? globalMessageEncoder = null, IGlobalMessageEncryptor? globalMessageEncryptor = null)
+        public IRPCCommandConnection EstablishRPCCommandConnection(IMessageEncoder? globalMessageEncoder = null, IMessageEncryptor? globalMessageEncryptor = null)
         {
             return new Connection(this, globalMessageEncoder, globalMessageEncryptor);
         }
@@ -149,7 +149,7 @@ namespace KubeMQ.Contract
         /// <param name="globalMessageEncryptor">If desired, an encryptor can be specified here and will be used to secure the message bodies as the default.  
         /// A type specific encryptor can be specified to override this for that particular type of message.</param>
         /// <returns></returns>
-        public IQueueConnection EstablishQueueConnection(IGlobalMessageEncoder? globalMessageEncoder = null, IGlobalMessageEncryptor? globalMessageEncryptor = null)
+        public IQueueConnection EstablishQueueConnection(IMessageEncoder? globalMessageEncoder = null, IMessageEncryptor? globalMessageEncryptor = null)
         {
             return new Connection(this, globalMessageEncoder, globalMessageEncryptor);
         }

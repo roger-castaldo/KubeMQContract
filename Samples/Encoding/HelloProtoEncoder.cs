@@ -3,7 +3,7 @@ using ProtoBuf;
 
 namespace Encoding
 {
-    public class HelloProtoEncoder : IMessageEncoder<HelloProto>
+    public class HelloProtoEncoder : IMessageTypeEncoder<HelloProto>
     {
         public HelloProto? Decode(Stream stream)
         {

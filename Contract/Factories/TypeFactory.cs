@@ -20,12 +20,12 @@ namespace KubeMQ.Contract.Factories
     internal class TypeFactory<T>:IMessageFactory<T>,IConversionPath<T>,ITypeFactory
     {
         private static readonly Regex regMetaData = new(@"^(U|C)-(.+)-((\d+\.)*(\d+))$", RegexOptions.Compiled,TimeSpan.FromMilliseconds(200));
-        private static readonly Regex headerRegex = new Regex("\r\n([^:]+):\\s*([^\r]+)\r\n", RegexOptions.Compiled|RegexOptions.ECMAScript, TimeSpan.FromMilliseconds(200));
+        private static readonly Regex headerRegex = new("\r\n([^:]+):\\s*([^\r]+)\r\n", RegexOptions.Compiled|RegexOptions.ECMAScript, TimeSpan.FromMilliseconds(200));
 
-        private readonly IGlobalMessageEncoder? globalMessageEncoder;
-        private readonly IGlobalMessageEncryptor? globalMessageEncryptor;
-        private readonly IMessageEncoder<T> messageEncoder;
-        private readonly IMessageEncryptor<T> messageEncryptor;
+        private readonly IMessageEncoder? globalMessageEncoder;
+        private readonly IMessageEncryptor? globalMessageEncryptor;
+        private readonly IMessageTypeEncoder<T> messageEncoder;
+        private readonly IMessageTypeEncryptor<T> messageEncryptor;
         private readonly IEnumerable<IConversionPath<T>> converters;
 
         public bool IgnoreMessageHeader { get; private init; }
@@ -36,7 +36,7 @@ namespace KubeMQ.Contract.Factories
         private readonly bool stored = typeof(T).GetCustomAttributes<StoredMessage>().FirstOrDefault() != null;
         private readonly int requestTimeout = typeof(T).GetCustomAttributes<MessageResponseTimeout>().Select(mrt => mrt.Value).FirstOrDefault(5000);
 
-        public TypeFactory(IGlobalMessageEncoder? globalMessageEncoder, IGlobalMessageEncryptor? globalMessageEncryptor, bool ignoreMessageHeader)
+        public TypeFactory(IMessageEncoder? globalMessageEncoder, IMessageEncryptor? globalMessageEncryptor, bool ignoreMessageHeader)
         {
             this.globalMessageEncoder = globalMessageEncoder;
             this.globalMessageEncryptor = globalMessageEncryptor;
@@ -45,19 +45,18 @@ namespace KubeMQ.Contract.Factories
                 .SelectMany(context => context.Assemblies)
                 .SelectMany(assembly => assembly.GetTypes())
                 .Where(t => !t.IsInterface && !t.IsAbstract);
-            messageEncoder = (IMessageEncoder<T>)Activator.CreateInstance(types
-                .FirstOrDefault(type => type.GetInterfaces().Any(iface => iface==typeof(IMessageEncoder<T>)), typeof(JsonEncoder<T>))
+            messageEncoder = (IMessageTypeEncoder<T>)Activator.CreateInstance(types
+                .FirstOrDefault(type => type.GetInterfaces().Any(iface => iface==typeof(IMessageTypeEncoder<T>)), typeof(JsonEncoder<T>))
                 )!;
-            messageEncryptor = (IMessageEncryptor<T>)Activator.CreateInstance(types
-                .FirstOrDefault(type => type.GetInterfaces().Any(iface => iface==typeof(IMessageEncryptor<T>)), typeof(NonEncryptor<T>))
+            messageEncryptor = (IMessageTypeEncryptor<T>)Activator.CreateInstance(types
+                .FirstOrDefault(type => type.GetInterfaces().Any(iface => iface==typeof(IMessageTypeEncryptor<T>)), typeof(NonEncryptor<T>))
                 )!;
-            if (IgnoreMessageHeader)
-                converters = Array.Empty<IConversionPath<T>>();
-            else
-                converters = TraceConverters(typeof(T), globalMessageEncoder, globalMessageEncryptor, types, Array.Empty<object>(), Array.Empty<IConversionPath<T>>());
+            converters = (IgnoreMessageHeader
+                ? Array.Empty<IConversionPath<T>>() 
+                : TraceConverters(typeof(T), globalMessageEncoder, globalMessageEncryptor, types, Array.Empty<object>(), Array.Empty<IConversionPath<T>>()));
         }
 
-        private static IEnumerable<IConversionPath<T>> TraceConverters(Type destinationType, IGlobalMessageEncoder? globalMessageEncoder, IGlobalMessageEncryptor? globalMessageEncryptor, IEnumerable<Type> types,IEnumerable<object> curPath, IEnumerable<IConversionPath<T>> converters)
+        private static IEnumerable<IConversionPath<T>> TraceConverters(Type destinationType, IMessageEncoder? globalMessageEncoder, IMessageEncryptor? globalMessageEncryptor, IEnumerable<Type> types,IEnumerable<object> curPath, IEnumerable<IConversionPath<T>> converters)
         {
             var subPaths = types.Where(t => t.GetInterfaces().Any(iface => iface.IsGenericType &&
                 iface.GetGenericTypeDefinition()==typeof(IMessageConverter<,>)
@@ -80,9 +79,7 @@ namespace KubeMQ.Contract.Factories
         }
 
         private static Type[] ExtractGenericArguements(Type t)
-        {
-            return t.GetInterfaces().First(iface => iface.IsGenericType && iface.GetGenericTypeDefinition()==typeof(IMessageConverter<,>)).GetGenericArguments();
-        }
+            => t.GetInterfaces().First(iface => iface.IsGenericType && iface.GetGenericTypeDefinition()==typeof(IMessageConverter<,>)).GetGenericArguments();
 
         private static bool IsMessageTypeMatch(string metaData, Type t, out bool isCompressed)
         {
@@ -173,14 +170,10 @@ namespace KubeMQ.Contract.Factories
 
         T? IConversionPath<T>.ConvertMessage(ILogger? logger, Stream stream, IMessageHeader messageHeader)
         {
-            if (globalMessageEncryptor!=null && messageEncryptor is NonEncryptor<T>)
-                stream=globalMessageEncryptor.Decrypt(stream,messageHeader);
-            else
-                stream = messageEncryptor.Decrypt(stream, messageHeader);
-            if (globalMessageEncoder!=null && messageEncoder is JsonEncoder<T>)
-                return globalMessageEncoder.Decode<T>(stream);
-            else 
-                return messageEncoder.Decode(stream);
+            stream = (globalMessageEncryptor!=null && messageEncryptor is NonEncryptor<T>? globalMessageEncryptor : messageEncryptor).Decrypt(stream,messageHeader);
+            return (globalMessageEncoder!=null && messageEncoder is JsonEncoder<T> 
+                ? globalMessageEncoder.Decode<T>(stream)
+                : messageEncoder.Decode(stream));
         }
 
         private IKubeMessage ProduceBaseMessage(T message, ConnectionOptions connectionOptions,string clientID, string? channel, Dictionary<string, string>? tagCollection)
@@ -189,14 +182,7 @@ namespace KubeMQ.Contract.Factories
             if (string.IsNullOrEmpty(channel))
                 throw new ArgumentNullException(nameof(channel), "message must have a channel value");
 
-            var body = messageEncoder.Encode(message);
-
-            Dictionary<string, string> messageHeader;
-
-            if (globalMessageEncryptor!=null && messageEncryptor is NonEncryptor<T>)
-                body = globalMessageEncryptor.Encrypt(body, out messageHeader);
-            else
-                body = messageEncryptor.Encrypt(body, out messageHeader);
+            var body = (globalMessageEncryptor!=null && messageEncryptor is NonEncryptor<T>  ? globalMessageEncryptor : messageEncryptor).Encrypt(messageEncoder.Encode(message),out var messageHeaders);
 
             var metaData = string.Empty;
             if (body.Length>(connectionOptions.MaxBodySize==0?int.MaxValue : connectionOptions.MaxBodySize))
@@ -213,9 +199,9 @@ namespace KubeMQ.Contract.Factories
             metaData+=$"-{messageName}-{messageVersion}";
 
             var tags = new MapField<string, string>();
-            if (messageHeader!=null)
+            if (messageHeaders!=null)
             {
-                foreach (var tag in messageHeader)
+                foreach (var tag in messageHeaders)
                     tags.Add(tag.Key, tag.Value);
             }
             if (tagCollection!=null)
@@ -238,30 +224,7 @@ namespace KubeMQ.Contract.Factories
             };
         }
 
-        IKubeEnqueue IMessageFactory<T>.Enqueue(T message, ConnectionOptions connectionOptions, string clientID, string? channel, Dictionary<string, string>? tagCollection, int? delaySeconds, int? expirationSeconds, int? maxCount, string? maxCountChannel)
-        {
-            var policy = typeof(T).GetCustomAttributes<MessageQueuePolicy>().FirstOrDefault();
-
-            if (policy!=null)
-            {
-                expirationSeconds ??= policy.ExpirationSeconds;
-                maxCount ??= policy.MaxCount;
-                maxCountChannel ??= policy.MaxCountChannel;
-            }
-
-            if ((maxCount!=null && maxCountChannel==null)
-                ||(maxCount==null&&maxCountChannel!=null))
-                throw new ArgumentOutOfRangeException(nameof(maxCountChannel),$"You must specify both the {nameof(maxCount)} and {nameof(maxCountChannel)} if you are specifying either");
-
-            return new KubeEnqueue(ProduceBaseMessage(message, connectionOptions,clientID, channel, tagCollection)){
-                DelaySeconds=delaySeconds,
-                ExpirationSeconds=expirationSeconds,
-                MaxSize=maxCount,
-                MaxCountChannel = maxCountChannel 
-            };
-        }
-
-        IKubeBatchEnqueue IMessageFactory<T>.Enqueue(IEnumerable<T> messages, ConnectionOptions connectionOptions, string clientID, string? channel, Dictionary<string, string>? tagCollection, int? delaySeconds, int? expirationSeconds, int? maxCount, string? maxCountChannel)
+        private static void ExtractQueuePolicy(Type type, ref int? expirationSeconds, ref int? maxCount, ref string? maxCountChannel)
         {
             var policy = typeof(T).GetCustomAttributes<MessageQueuePolicy>().FirstOrDefault();
 
@@ -275,6 +238,23 @@ namespace KubeMQ.Contract.Factories
             if ((maxCount!=null && maxCountChannel==null)
                 ||(maxCount==null&&maxCountChannel!=null))
                 throw new ArgumentOutOfRangeException(nameof(maxCountChannel), $"You must specify both the {nameof(maxCount)} and {nameof(maxCountChannel)} if you are specifying either");
+        }
+
+        IKubeEnqueue IMessageFactory<T>.Enqueue(T message, ConnectionOptions connectionOptions, string clientID, string? channel, Dictionary<string, string>? tagCollection, int? delaySeconds, int? expirationSeconds, int? maxCount, string? maxCountChannel)
+        {
+            ExtractQueuePolicy(typeof(T), ref expirationSeconds, ref maxCount, ref maxCountChannel);
+            
+            return new KubeEnqueue(ProduceBaseMessage(message, connectionOptions,clientID, channel, tagCollection)){
+                DelaySeconds=delaySeconds,
+                ExpirationSeconds=expirationSeconds,
+                MaxSize=maxCount,
+                MaxCountChannel = maxCountChannel 
+            };
+        }
+
+        IKubeBatchEnqueue IMessageFactory<T>.Enqueue(IEnumerable<T> messages, ConnectionOptions connectionOptions, string clientID, string? channel, Dictionary<string, string>? tagCollection, int? delaySeconds, int? expirationSeconds, int? maxCount, string? maxCountChannel)
+        {
+            ExtractQueuePolicy(typeof(T), ref expirationSeconds, ref maxCount, ref maxCountChannel);
 
             return new KubeBatchEnqueue(){
                 Messages=messages.Select(message =>
@@ -301,26 +281,20 @@ namespace KubeMQ.Contract.Factories
         }
 
         IKubeEvent IMessageFactory<T>.Event(T message, ConnectionOptions connectionOptions, string clientID, string? channel, Dictionary<string, string>? tagCollection)
-        {
-            return new KubeEvent(ProduceBaseMessage(message, connectionOptions,clientID, channel, tagCollection))
+            => new KubeEvent(ProduceBaseMessage(message, connectionOptions,clientID, channel, tagCollection))
             {
                 Stored=stored
             };
-        }
 
         IKubeRequest IMessageFactory<T>.Request(T message, ConnectionOptions connectionOptions, string clientID, string? channel, Dictionary<string, string>? tagCollection, int? timeout,RequestType requestType)
-        {
-            return new KubeRequest(ProduceBaseMessage(message, connectionOptions,clientID, channel, tagCollection))
+            => new KubeRequest(ProduceBaseMessage(message, connectionOptions,clientID, channel, tagCollection))
             {
                 Timeout=timeout??requestTimeout,
                 CommandType=requestType
             };
-        }
 
         IKubeMessage IMessageFactory<T>.Response(T message, ConnectionOptions connectionOptions, string clientID, string responseChannel, Dictionary<string, string>? tagCollection)
-        {
-            return ProduceBaseMessage(message, connectionOptions,clientID, responseChannel, tagCollection);
-        }
+            => ProduceBaseMessage(message, connectionOptions,clientID, responseChannel, tagCollection);
 
         Interfaces.Messages.IInternalMessage<T> IMessageFactory<T>.ConvertMessage(ILogger? logger, QueueMessage msg)
             => ConvertMessage(logger, msg.Metadata, msg.Body, msg.Tags, msg.MessageID, (msg.Attributes.Timestamp==0 ? DateTime.Now: Utility.FromUnixTime(msg.Attributes.Timestamp)));

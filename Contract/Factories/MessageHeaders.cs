@@ -15,7 +15,8 @@ namespace KubeMQ.Contract.Factories
                 .Concat(values.Where(pair=>tags==null || !tags.ContainsKey(pair.Key)));
         }
 
-        public IEnumerable<string> Keys => (Values==null ? Array.Empty<string>() : Values.Select(pair=>pair.Key));
+        public IEnumerable<string> Keys 
+            => (Values==null ? Array.Empty<string>() : Values.Select(pair=>pair.Key));
 
         public string? this[string key]
             => Values.FirstOrDefault(pair=>pair.Key.Equals(key, StringComparison.OrdinalIgnoreCase)).Value;

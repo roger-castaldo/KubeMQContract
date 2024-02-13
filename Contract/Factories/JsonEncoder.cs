@@ -1,30 +1,21 @@
 ﻿using KubeMQ.Contract.Interfaces.Messages;
+using System.Text.Json;
 
 namespace KubeMQ.Contract.Factories
 {
-    internal class JsonEncoder<T> : IMessageEncoder<T> 
+    internal class JsonEncoder<T> : IMessageTypeEncoder<T> 
     {
-        private static readonly System.Text.Json.JsonSerializerOptions options = new()
+        private static readonly JsonSerializerOptions options = new()
         {
             WriteIndented=false,
             DefaultBufferSize=4096,
             AllowTrailingCommas=true,
             PropertyNameCaseInsensitive=true,
-            ReadCommentHandling=System.Text.Json.JsonCommentHandling.Skip
+            ReadCommentHandling=JsonCommentHandling.Skip
         };
 
-        public T? Decode(Stream stream)
-        {
-            return System.Text.Json.JsonSerializer.Deserialize<T>(stream,options:options);
-        }
+        public T? Decode(Stream stream) => JsonSerializer.Deserialize<T>(stream,options:options);
 
-        public byte[] Encode(T message)
-        {
-            using var ms = new MemoryStream();
-            System.Text.Json.JsonSerializer.Serialize<T>(ms, message, options: options);
-            var result = ms.ToArray();
-            ms.Dispose();
-            return result;
-        }
+        public byte[] Encode(T message) => System.Text.UTF8Encoding.UTF8.GetBytes(JsonSerializer.Serialize<T>(message, options: options));
     }
 }

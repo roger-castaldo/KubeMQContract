@@ -1,26 +1,28 @@
-﻿namespace KubeMQ.Contract.Interfaces.Messages
+﻿using KubeMQ.Contract.Interfaces.Messages;
+
+namespace KubeMQ.Contract.Interfaces
 {
     /// <summary>
-    /// Used to define a specific message encryptor for the type T.  
-    /// This will override the global decryptor if specified for this connection 
-    /// as well as the default of not encrypting the message body
+    /// An implementation of this is used to encrypt/decrypt message bodies when 
+    /// specified for a connection.  This is to allow for extended message security
+    /// if desired.
     /// </summary>
-    /// <typeparam name="T">The type of message that this encryptor supports</typeparam>
-    public interface IMessageEncryptor<T> 
+    public interface IMessageEncryptor
     {
         /// <summary>
-        /// Called to Decrypt the byte stream provided by the KubeMQ message
+        /// Called to decrypt the message body stream recieved as a message
         /// </summary>
-        /// <param name="stream">The byte stream from the message body</param>
-        /// <param name="headers">The headers from the message</param>
-        /// <returns>A decrypted version of the stream provided</returns>
+        /// <param name="stream">The stream representing the message body binary data</param>
+        /// <param name="headers">The message headers that were provided by the message</param>
+        /// <returns>A decrypted stream of the message body</returns>
         Stream Decrypt(Stream stream, IMessageHeader headers);
+
         /// <summary>
-        /// Called to Encrypt the byte array of the message after being encoded
+        /// Called to encrypt the message body prior to transmitting a message
         /// </summary>
-        /// <param name="data">The byte array representing the encoded message body</param>
-        /// <param name="headers">The headers to be attached to the message if needed</param>
-        /// <returns>An encrypted version of the provided byte array</returns>
+        /// <param name="data">The original unencrypted body data</param>
+        /// <param name="headers">The headers that are desired to attache to the message if needed</param>
+        /// <returns>An encrypted byte array of the message body</returns>
         byte[] Encrypt(byte[] data, out Dictionary<string, string> headers);
     }
 }

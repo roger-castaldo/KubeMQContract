@@ -1,23 +1,26 @@
-﻿namespace KubeMQ.Contract.Interfaces.Messages
+﻿namespace KubeMQ.Contract.Interfaces
 {
     /// <summary>
-    /// Used to define a specific encoder for the message type of T
-    /// This is used to override the default Json and the Global one for the connection if specified
+    /// An implementation of this is used to encode/decode message bodies when 
+    /// specified for a connection.  This is to allow for an override of the 
+    /// default encoding of Json for the messages.
     /// </summary>
-    /// <typeparam name="T">The type of message that this encoder supports</typeparam>
-    public interface IMessageEncoder<T> 
+    public interface IMessageEncoder
     {
         /// <summary>
-        /// Called to encode the message into a byte array
+        /// Called to encode a message into a byte array
         /// </summary>
-        /// <param name="message">The message value to encode</param>
-        /// <returns>The message encoded as a byte array</returns>
-        byte[] Encode(T message);
+        /// <typeparam name="T">The type of message being encoded</typeparam>
+        /// <param name="message">The message being encoded</param>
+        /// <returns>A byte array of the message in it's encoded form that will be transmitted</returns>
+        byte[] Encode<T>(T message);
+        
         /// <summary>
-        /// Called to decode the message from a byte stream into the specified type
+        /// Called to decode a message from a byte array
         /// </summary>
-        /// <param name="stream">The byte stream containing the encoded message</param>
-        /// <returns>null if the Decode fails, otherwise an instance of the message decoded from the stream</returns>
-        T? Decode(Stream stream);
+        /// <typeparam name="T">The type of message being decoded</typeparam>
+        /// <param name="stream">A stream representing the byte array data that was transmitted as the message body in KubeMQ</param>
+        /// <returns>Null when fails or the value of T that was encoded inside the stream</returns>
+        T? Decode<T>(Stream stream);
     }
 }

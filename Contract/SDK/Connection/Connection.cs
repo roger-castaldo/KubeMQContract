@@ -15,8 +15,8 @@ namespace KubeMQ.Contract.SDK.Connection
         private readonly Guid id;
         private readonly string clientID;
         private readonly ConnectionOptions connectionOptions;
-        private readonly IGlobalMessageEncoder? globalMessageEncoder;
-        private readonly IGlobalMessageEncryptor? globalMessageEncryptor;
+        private readonly IMessageEncoder? globalMessageEncoder;
+        private readonly IMessageEncryptor? globalMessageEncryptor;
         private readonly KubeClient client;
         private readonly List<IMessageSubscription> subscriptions;
         private readonly ReaderWriterLockSlim dataLock = new();
@@ -24,7 +24,7 @@ namespace KubeMQ.Contract.SDK.Connection
         private readonly string addy;
         private readonly ILogger? logger;
 
-        public Connection(ConnectionOptions connectionOptions, IGlobalMessageEncoder? globalMessageEncoder, IGlobalMessageEncryptor? globalMessageEncryptor)
+        public Connection(ConnectionOptions connectionOptions, IMessageEncoder? globalMessageEncoder, IMessageEncryptor? globalMessageEncryptor)
         {
             id=Guid.NewGuid();
             clientID = $"{connectionOptions.ClientId}[{id}]";

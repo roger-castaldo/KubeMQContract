@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 
 namespace Encrypting
 {
-    internal class GreetingEncryptor : IMessageEncryptor<Greeting>
+    internal class GreetingEncryptor : IMessageTypeEncryptor<Greeting>
     {
         private const string KEY_NAME = "greet_key";
         private const string IV_NAME = "greet_iv";

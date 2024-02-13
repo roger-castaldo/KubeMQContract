@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 
 namespace Encrypting
 {
-    internal class GlobalEncryptor : IGlobalMessageEncryptor
+    internal class GlobalEncryptor : IMessageEncryptor
     {
         private const string KEY_NAME = "key";
         private const string IV_NAME = "iv";
