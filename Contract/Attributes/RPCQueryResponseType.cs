@@ -12,6 +12,6 @@
         /// Default constructor
         /// </summary>
         /// <param name="responseType">The type of class that should be expected for a response</param>
-        public RPCQueryResponseType(Type responseType) { this.ResponseType = responseType; }
+        public RPCQueryResponseType(Type responseType) => ResponseType = responseType;
     }
 }

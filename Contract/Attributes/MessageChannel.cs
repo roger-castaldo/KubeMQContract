@@ -8,13 +8,12 @@
     [AttributeUsage(AttributeTargets.Class,AllowMultiple=false,Inherited=true)]
     public class MessageChannel : Attribute
     {
-        private readonly string _name;
-        internal string Name => _name;
+        internal string Name { get; private init; }
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="name">The name of the Channel to be used for transmitting this message class.</param>
-        public MessageChannel(string name) => _name=name;
+        public MessageChannel(string name) => Name=name;
     }
 }

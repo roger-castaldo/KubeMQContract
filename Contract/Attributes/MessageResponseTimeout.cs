@@ -8,16 +8,12 @@
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false,Inherited =false)]
     public class MessageResponseTimeout : Attribute
     {
-        private readonly int _value;
-        internal int Value => _value;
+        internal int Value { get; private init; }
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="value">The number of milliseconds for an RPC call response to return</param>
-        public MessageResponseTimeout(int value)
-        {
-            _value=value;
-        }   
+        public MessageResponseTimeout(int value) => Value = value;
     }
 }

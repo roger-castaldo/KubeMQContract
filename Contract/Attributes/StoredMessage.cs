@@ -7,16 +7,12 @@
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
     public class StoredMessage : Attribute
     {
-        private readonly MessageReadStyle _style;
-        internal MessageReadStyle Style => _style;
+        internal MessageReadStyle Style { get; private init; }
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="style">The desired Read Style to use when using a listener</param>
-        public StoredMessage(MessageReadStyle style)
-        {
-            _style = style;
-        }
+        public StoredMessage(MessageReadStyle style) => Style=style;
     }
 }

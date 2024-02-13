@@ -10,16 +10,12 @@
     [AttributeUsage(AttributeTargets.Class,AllowMultiple =false,Inherited =false)]
     public class MessageVersion : Attribute
     {
-        private readonly Version _version;
-        internal Version Version => _version;
+        internal Version Version { get; private init; }
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="version">The version number to tag this message class during transmission</param>
-        public MessageVersion(string version)
-        {
-            _version=Version.Parse(version);
-        }
+        public MessageVersion(string version) => Version=new Version(version);
     }
 }

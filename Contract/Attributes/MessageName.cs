@@ -9,13 +9,12 @@
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false,Inherited =false)]
     public class MessageName :Attribute
     {
-        private readonly string value;
-        internal string Value => value;
+        internal string Value { get; private init; }
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="value">The name to use for the class when transmitting</param>
-        public MessageName(string value) => this.value = value;
+        public MessageName(string value) => Value = value;
     }
 }

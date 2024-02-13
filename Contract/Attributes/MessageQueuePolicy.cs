@@ -8,12 +8,9 @@
     [AttributeUsage(AttributeTargets.Class,AllowMultiple =false,Inherited =false)]
     public class MessageQueuePolicy : Attribute
     {
-        private readonly int? expirationSeconds;
-        internal int? ExpirationSeconds => expirationSeconds;
-        private readonly int? maxCount;
-        internal int? MaxCount => maxCount;
-        private readonly string? maxCountChannel;
-        internal string? MaxCountChannel => maxCountChannel;
+        internal int? ExpirationSeconds { get; private init; }
+        internal int? MaxCount { get; private init; }
+        internal string? MaxCountChannel { get; private init; }
 
         /// <summary>
         /// 
@@ -24,12 +21,12 @@
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         public MessageQueuePolicy(int? expirationSeconds=null, int? maxCount = null, string? maxCountChannel = null)
         {
-            this.expirationSeconds=expirationSeconds;
-            this.maxCount=maxCount;
-            this.maxCountChannel=maxCountChannel;
             if ((maxCount!=null && maxCountChannel==null)
-                ||(maxCount==null&&maxCountChannel!=null))
+               ||(maxCount==null&&maxCountChannel!=null))
                 throw new ArgumentOutOfRangeException("You must specify both the maxCount and maxCountQeueue if you are specifying either");
+            ExpirationSeconds=expirationSeconds;
+            MaxCount=maxCount;
+            MaxCountChannel=maxCountChannel;
         }
     }
 }

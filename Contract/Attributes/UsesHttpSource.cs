@@ -12,9 +12,6 @@
         /// Default Constructor
         /// </summary>
         /// <param name="messageTypeHeader">The http header that contains the message type string</param>
-        public UsesHttpSource(string messageTypeHeader)
-        {
-            MessageTypeHeader = messageTypeHeader;
-        }
+        public UsesHttpSource(string messageTypeHeader) => MessageTypeHeader = messageTypeHeader;
     }
 }
