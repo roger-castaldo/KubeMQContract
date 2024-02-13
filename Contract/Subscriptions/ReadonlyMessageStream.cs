@@ -9,26 +9,26 @@ namespace KubeMQ.Contract.Subscriptions
     internal class ReadonlyMessageStream<T> : MessageStream,IReadonlyMessageStream<T>, IMessageSubscription 
     {
         public Guid ID { get; private init; } = Guid.NewGuid();
-        private readonly EventSubscription<T> _subscription;
-        private readonly Channel<IMessage<T>> _channel;
+        private readonly EventSubscription<T> subscription;
+        private readonly Channel<IMessage<T>> channel;
 
         public ReadonlyMessageStream(Guid id,IMessageFactory<T> messageFactory, KubeSubscription<T> subscription, KubeClient client, ConnectionOptions options, Action<Exception> errorRecieved, long storageOffset, ILogger? logger, MessageReadStyle? messageReadStyle, CancellationToken cancellationToken)
         {
             ID=id;
             cancellationToken.Register(() => { Stop(); });
-            _channel = Channel.CreateUnbounded<IMessage<T>>(new UnboundedChannelOptions()
+            channel = Channel.CreateUnbounded<IMessage<T>>(new UnboundedChannelOptions()
             {
                 SingleReader=true,
                 SingleWriter=true
             });
-            _subscription = new EventSubscription<T>(id,messageFactory, subscription, client, options,async (message) => {
+            this.subscription = new EventSubscription<T>(id, messageFactory, subscription, client, options,async (message) => {
                 success++;
-                await _channel.Writer.WriteAsync(message);
+                await channel.Writer.WriteAsync(message);
             }, err =>
             {
                 errors++;
                 errorRecieved(err);
-            },messageReadStyle,storageOffset,logger,true,cancellationToken);
+            }, messageReadStyle, storageOffset, logger, true, cancellationToken);
         }
 
         protected override void Dispose(bool disposing)
@@ -39,34 +39,28 @@ namespace KubeMQ.Contract.Subscriptions
                 {
                     try
                     {
-                        _subscription.Stop();
+                        subscription.Stop();
                     }
                     catch (Exception) { }
                     try
                     {
-                        _channel.Writer.Complete();
+                        channel.Writer.Complete();
                     }
                     catch (Exception) { }
                     base.Dispose(disposing);
-                    if (_channel.Reader.TryPeek(out _))
+                    if (channel.Reader.TryPeek(out _))
                         throw new ArgumentOutOfRangeException("Items", "There are unprocessed items in the stream.");
                 }
             }
         }
 
         public IAsyncEnumerator<IMessage<T>> GetAsyncEnumerator(CancellationToken cancellationToken = default)
-        {
-            return _channel.Reader.ReadAllAsync(cancellationToken).GetAsyncEnumerator(cancellationToken);
-        }
+            =>channel.Reader.ReadAllAsync(cancellationToken).GetAsyncEnumerator(cancellationToken);
 
         public void Start()
-        {
-            _subscription.Start();
-        }
+            =>subscription.Start();
 
         public void Stop()
-        {
-            Dispose();
-        }
+            =>Dispose();
     }
 }
