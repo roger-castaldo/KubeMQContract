@@ -79,12 +79,12 @@ namespace KubeMQ.Contract.SDK.Connection
             catch (RpcException ex)
             {
                 err=ex;
-                logger.LogError("KubeClient RPC Error[Message:{},Status:{}]", ex.Message, ex.StatusCode);
+                logger?.LogError("KubeClient RPC Error[Message:{},Status:{}]", ex.Message, ex.StatusCode);
             }
             catch (Exception ex)
             {
                 err=ex;
-                logger.LogError("KubeClient Error[Message:{}]", ex.Message);
+                logger?.LogError("KubeClient Error[Message:{}]", ex.Message);
             }
             if (err!=null)
                 throw err;
@@ -103,11 +103,11 @@ namespace KubeMQ.Contract.SDK.Connection
             catch (RpcException ex)
             {
                 err=ex;
-                logger.LogError("KubeClient RPC Error[Message:{},Status:{}]", ex.Message, ex.StatusCode);
+                logger?.LogError("KubeClient RPC Error[Message:{},Status:{}]", ex.Message, ex.StatusCode);
             } catch (Exception ex)
             {
                 err=ex;
-                logger.LogError("KubeClient Error[Message:{}]", ex.Message);
+                logger?.LogError("KubeClient Error[Message:{}]", ex.Message);
             }
             if (err!=null)
                 throw err;

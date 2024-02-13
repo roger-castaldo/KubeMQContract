@@ -1,22 +1,27 @@
-﻿using KubeMQ.Contract.Interfaces;
+﻿using Google.Protobuf.Collections;
+using KubeMQ.Contract.Interfaces.Messages;
 
-namespace KubeMQ.Contract.SDK
+namespace KubeMQ.Contract.Messages
 {
-    internal class PingResult : IPingResult
+    internal class ReadonlyMessageHeader : IMessageHeader
     {
-        private readonly KubeMQ.Contract.SDK.Grpc.PingResult result;
         private bool disposedValue;
 
-        public PingResult(KubeMQ.Contract.SDK.Grpc.PingResult result)
-            =>this.result=result;
+        internal MapField<string, string>? Tags { get; private init; }
 
-        public string Host => result.Host;
+        public ReadonlyMessageHeader(MapField<string,string>? tags=null) => Tags=tags;
 
-        public string Version => result.Version;
+        public IEnumerable<string> Keys => Tags?.Keys??Array.Empty<string>();
 
-        public DateTime ServerStartTime => Utility.FromUnixTime(result.ServerStartTime);
-
-        public TimeSpan ServerUpTime => TimeSpan.FromSeconds(result.ServerUpTimeSeconds);
+        public string? this[string key]
+        {
+            get
+            {
+                string? value = null;
+                Tags?.TryGetValue(key, out value);
+                return value;
+            }
+        }
 
         protected virtual void Dispose(bool disposing)
         {
@@ -34,7 +39,7 @@ namespace KubeMQ.Contract.SDK
         }
 
         // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
-        // ~PingResult()
+        // ~ReadonlyMessageHeader()
         // {
         //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         //     Dispose(disposing: false);

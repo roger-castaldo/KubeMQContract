@@ -93,11 +93,11 @@ var response4 = await commandConn.SendRPCCommand<Hello2>(new Hello2()
 
 Console.WriteLine($"Response 3 : {response3.Response}");
 Console.WriteLine("Tags:");
-foreach (var key in response3.Keys)
-    Console.WriteLine($"{key}={response3[key]}");
+foreach (var key in response3.Headers.Keys)
+    Console.WriteLine($"{key}={response3.Headers[key]}");
 Console.WriteLine($"Response 4 : {response4.Response}");
 Console.WriteLine("Tags:");
-foreach (var key in response4.Keys)
-    Console.WriteLine($"{key}={response4[key]}");
+foreach (var key in response4.Headers.Keys)
+    Console.WriteLine($"{key}={response4.Headers[key]}");
 
 commandConn.Unsubscribe(listener);

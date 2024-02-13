@@ -29,30 +29,17 @@ namespace KubeMQ.Contract.SDK.Connection
                     Tags = { msg.Tags }
                 }, connectionOptions.GrpcMetadata, cancellationToken);
                 Log(LogLevel.Information, "Transmission Result for {} (IsError:{},Error:{})", msg.ID, !string.IsNullOrEmpty(res.Error), res.Error);
-                return new TransmissionResult()
-                {
-                    MessageID=new Guid(msg.ID),
-                    IsError = !string.IsNullOrEmpty(res.Error),
-                    Error=res.Error
-                };
+                return new TransmissionResult(id:new Guid(msg.ID),res.Error);
             }
             catch (RpcException ex)
             {
                 Log(LogLevel.Error, "RPC error occured on Send in send Message:{}, Status: {}", ex.Message, ex.Status);
-                return new TransmissionResult()
-                {
-                    IsError=true,
-                    Error=$"Message: {ex.Message}, Status: {ex.Status}"
-                };
+                return new TransmissionResult(error:$"Status: {ex.Status}, Message: {ex.Message}");
             }
             catch (Exception ex)
             {
                 Log(LogLevel.Error, "Exception occured in Send Message:{}", ex.Message);
-                return new TransmissionResult()
-                {
-                    IsError=true,
-                    Error=ex.Message
-                };
+                return new TransmissionResult(error: ex.Message);
             }
         }
 

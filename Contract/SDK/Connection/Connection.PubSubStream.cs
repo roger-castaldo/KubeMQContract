@@ -29,9 +29,8 @@ namespace KubeMQ.Contract.SDK.Connection
 
         public IWritableMessageStream<T> CreateStream<T>(string? channel = null)
         {
-            var stream = new WritableMessageStream<T>(this, channel);
             Log(LogLevel.Information, "Producing a WritableStream of type {}", Utility.TypeName<T>());
-            return stream;
+            return new WritableMessageStream<T>(this, channel);
         }
     }
 }

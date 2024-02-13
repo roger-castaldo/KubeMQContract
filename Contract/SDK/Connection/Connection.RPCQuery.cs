@@ -24,7 +24,7 @@ namespace KubeMQ.Contract.SDK.Connection
                 Log(LogLevel.Information, "Sending RPC Message {} of type {}", msg.ID, Utility.TypeName<T>());
                 var res = await client.SendRequestAsync(new Request()
                 {
-                    RequestID=msg.ID,
+                    RequestID=msg.ID.ToString(),
                     RequestTypeData = msg.CommandType,
                     Timeout = msg.Timeout,
                     ClientID = msg.ClientID,
@@ -36,38 +36,22 @@ namespace KubeMQ.Contract.SDK.Connection
                 if (res==null)
                 {
                     Log(LogLevel.Error, "Transmission Result for RPC {} is null", msg.ID);
-                    return new ResultMessage<R>()
-                    {
-                        IsError=true,
-                        Error="null response recieved from KubeMQ server"
-                    };
+                    return new ResultMessage<R>(error: "null response recieved from KubeMQ server");
                 }
                 Log(LogLevel.Information, "Transmission Result for RPC {} (IsError:{},Error:{})", msg.ID, !string.IsNullOrEmpty(res.Error), res.Error);
                 if (!res.Executed || !string.IsNullOrEmpty(res.Error))
-                    return new ResultMessage<R>()
-                    {
-                        IsError=true,
-                        Error=res.Error
-                    };
+                    return new ResultMessage<R>(error:res.Error);
                 return responseFactory.ConvertMessage(logger, res);
             }
             catch (RpcException ex)
             {
                 Log(LogLevel.Error, "RPC error occured on SendRPC in send Message:{}, Status: {}", ex.Message, ex.Status);
-                return new ResultMessage<R>()
-                {
-                    IsError=true,
-                    Error=$"Message: {ex.Message}, Status: {ex.Status}"
-                };
+                return new ResultMessage<R>(error: $"Status: {ex.Status}, Message: {ex.Message}");
             }
             catch (Exception ex)
             {
                 Log(LogLevel.Error, "Exception occured in SendRPC Message:{}, Status: {}", ex.Message);
-                return new ResultMessage<R>()
-                {
-                    IsError=true,
-                    Error=ex.Message
-                };
+                return new ResultMessage<R>(error:ex.Message);
             }
         }
 

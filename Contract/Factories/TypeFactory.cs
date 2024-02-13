@@ -148,23 +148,11 @@ namespace KubeMQ.Contract.Factories
         {
             try
             {
-                return new Message<T>()
-                {
-                    Data=ConvertData(logger, metaData, body, tags),
-                    Tags=tags,
-                    ID=id,
-                    Timestamp=timestamp
-                };
+                return new Message<T>(id, ConvertData(logger, metaData, body, tags), timestamp: timestamp, tags: tags);
             }catch (Exception e)
             {
                 System.Diagnostics.Debug.WriteLine(System.Text.UTF8Encoding.UTF8.GetString(body.ToArray()));
-                return new Message<T>()
-                {
-                    Exception=e,
-                    Tags=tags,
-                    ID=id,
-                    Timestamp=timestamp
-                };
+                return new Message<T>(id,timestamp: timestamp, tags: tags, exception:e);
             }
         }
 
@@ -268,7 +256,7 @@ namespace KubeMQ.Contract.Factories
                     };
                     return new QueueMessage()
                     {
-                        MessageID= msg.ID,
+                        MessageID= msg.ID.ToString(),
                         ClientID = msg.ClientID,
                         Channel = msg.Channel,
                         Metadata = msg.MetaData,
@@ -308,18 +296,11 @@ namespace KubeMQ.Contract.Factories
         {
             try
             {
-                return new ResultMessage<T>()
-                {
-                    Response=ConvertData(logger, msg.Metadata, msg.Body, msg.Tags),
-                    Tags=msg.Tags
-                };
+                return new ResultMessage<T>(response:ConvertData(logger, msg.Metadata, msg.Body, msg.Tags),tags:msg.Tags);
             }
             catch (Exception e)
             {
-                return new ResultMessage<T>()
-                {
-                    Error=e.Message
-                };
+                return new ResultMessage<T>(error:e.Message);
             }
         }
 

@@ -1,10 +1,19 @@
-﻿using KubeMQ.Contract.Interfaces.Messages;
+﻿using Google.Protobuf.Collections;
+using KubeMQ.Contract.Interfaces.Messages;
 
 namespace KubeMQ.Contract.Messages
 {
-    internal class ResultMessage<T> : TransmittedMessage, IResultMessage<T>
+    internal class ResultMessage<T> : TransmissionResult, IResultMessage<T>
     {
-        public T? Response { get; init; }
+        public T? Response { get; private init; }
+        public IMessageHeader Headers { get; private init; }
+
+        public ResultMessage(Guid? id = null, string? error = null, MapField<string,string>? tags=null,T? response=default(T?))
+            : base(id, error)
+        {
+            Response=response;
+            Headers = new ReadonlyMessageHeader(tags);
+        }
 
         protected override void Dispose(bool disposing)
         {

@@ -6,11 +6,17 @@ namespace KubeMQ.Contract.Messages
     {
         protected bool disposedValue;
 
-        public Guid MessageID { get; init; } = Guid.Empty;
+        public Guid MessageID { get; private init; } = Guid.Empty;
 
-        public bool IsError { get; init; } = false;
+        public bool IsError => !string.IsNullOrEmpty(Error);
 
-        public string? Error { get; init; } = String.Empty;
+        public string? Error { get; private init; } = String.Empty;
+
+        public TransmissionResult(Guid? id=null,string? error=null)
+        {
+            MessageID=id??Guid.Empty;
+            Error=error;
+        }
 
         protected virtual void Dispose(bool disposing)
         {

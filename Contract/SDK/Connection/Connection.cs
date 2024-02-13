@@ -10,7 +10,7 @@ namespace KubeMQ.Contract.SDK.Connection
 {
     internal partial class Connection : IConnection, IDisposable
     {
-        private static readonly Regex _regURL = new("^http(s)?://(.+)$", RegexOptions.Compiled|RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(500));
+        private static readonly Regex regURL = new("^http(s)?://(.+)$", RegexOptions.Compiled|RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(500));
 
         private readonly Guid id;
         private readonly string clientID;
@@ -21,6 +21,7 @@ namespace KubeMQ.Contract.SDK.Connection
         private readonly List<IMessageSubscription> subscriptions;
         private readonly ReaderWriterLockSlim dataLock = new();
         private IEnumerable<ITypeFactory> typeFactories;
+        private bool disposedValue;
         private readonly string addy;
         private readonly ILogger? logger;
 
@@ -31,19 +32,16 @@ namespace KubeMQ.Contract.SDK.Connection
             this.connectionOptions = connectionOptions;
             this.globalMessageEncoder = globalMessageEncoder;
             this.globalMessageEncryptor=globalMessageEncryptor;
-            this.logger = connectionOptions.Logger?.CreateLogger($"KubeMQContract[{id}]");
+            logger = connectionOptions.Logger?.CreateLogger($"KubeMQContract[{id}]");
             Log(LogLevel.Debug, "Attempting to establish connection to server {}", connectionOptions.Address);
             addy = this.connectionOptions.Address;
-            var match = _regURL.Match(addy);
+            var match = regURL.Match(addy);
             if (!match.Success)
                 addy=$"http{(connectionOptions.SSLCredentials!=null ? "s" : "")}://{addy}";
-            else
-            {
-                if (connectionOptions.SSLCredentials!=null && string.IsNullOrEmpty(match.Groups[1].Value))
-                    addy = $"https://{match.Groups[2].Value}";
-                else if (connectionOptions.SSLCredentials==null && !string.IsNullOrEmpty(match.Groups[1].Value))
-                    addy = $"http://{match.Groups[2].Value}";
-            }
+            else if (connectionOptions.SSLCredentials!=null && string.IsNullOrEmpty(match.Groups[1].Value))
+                addy = $"https://{match.Groups[2].Value}";
+            else if (connectionOptions.SSLCredentials==null && !string.IsNullOrEmpty(match.Groups[1].Value))
+                addy = $"http://{match.Groups[2].Value}";
             subscriptions = new();
             typeFactories = Array.Empty<ITypeFactory>();
             dataLock.EnterWriteLock();
@@ -60,11 +58,10 @@ namespace KubeMQ.Contract.SDK.Connection
         }
 
         private void Log(LogLevel level, string message, params object[]? args)
-        {
+            =>
 #pragma warning disable CA2254 // Template should be a static expression
             logger?.Log(level, message, args);
 #pragma warning restore CA2254 // Template should be a static expression
-        }
 
         private KubeClient EstablishConnection()
         {
@@ -106,21 +103,41 @@ namespace KubeMQ.Contract.SDK.Connection
         }
 
         private ILogger? ProduceLogger(Guid subID)
+            =>connectionOptions.Logger?.CreateLogger($"KubeMQContract[Conn({this.id}),Sub({subID})]");
+
+        protected virtual void Dispose(bool disposing)
         {
-            return connectionOptions.Logger?.CreateLogger($"KubeMQContract[Conn({this.id}),Sub({subID})]");
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    dataLock.EnterWriteLock();
+                    foreach (var sub in subscriptions)
+                        sub.Stop();
+                    subscriptions.Clear();
+                    client.Dispose();
+                    dataLock.ExitWriteLock();
+                    dataLock.Dispose();
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+                // TODO: set large fields to null
+                disposedValue=true;
+            }
         }
+
+        // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+        // ~Connection()
+        // {
+        //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        //     Dispose(disposing: false);
+        // }
 
         public void Dispose()
         {
-            dataLock.EnterWriteLock();
-            foreach (var sub in subscriptions)
-            {
-                sub.Stop();
-            }
-            subscriptions.Clear();
-            client.Dispose();
-            dataLock.ExitWriteLock();
-            dataLock.Dispose();
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }

@@ -4,7 +4,7 @@
     /// Represents a message recieved from the system (be it PubSub, RPC, Queue) 
     /// </summary>
     /// <typeparam name="T">The type of message recieved</typeparam>
-    public interface IMessage<T> : IMessageHeader 
+    public interface IMessage<T> : IDisposable
     {
         /// <summary>
         /// The ID of the message that was generated during transmission
@@ -19,8 +19,12 @@
         /// </summary>
         DateTime ConversionTimestamp { get; }
         /// <summary>
+        /// The headers supplied from the KubeMQ message
+        /// </summary>
+        IMessageHeader Headers { get; }
+        /// <summary>
         /// Houses the Message itself
         /// </summary>
-        T Data { get; }
+        T? Data { get; }
     }
 }

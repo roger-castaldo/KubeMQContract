@@ -30,30 +30,17 @@ namespace KubeMQ.Contract.SDK.Connection
                     Attributes = msg.Attributes
                 }, connectionOptions.GrpcMetadata, cancellationToken);
                 Log(LogLevel.Information, "Transmission Result for EnqueueMessage {} (IsError:{},Error:{})", msg.ID, !string.IsNullOrEmpty(res.Error), res.Error);
-                return new TransmissionResult()
-                {
-                    MessageID=new Guid(msg.ID),
-                    IsError = !string.IsNullOrEmpty(res.Error),
-                    Error=res.Error
-                };
+                return new TransmissionResult(id:new Guid(msg.ID),error:res.Error);
             }
             catch (RpcException ex)
             {
                 Log(LogLevel.Error, "RPC error occured on EnqueueMessage in send Message:{}, Status: {}", ex.Message, ex.Status);
-                return new TransmissionResult()
-                {
-                    IsError=true,
-                    Error=$"Message: {ex.Message}, Status: {ex.Status}"
-                };
+                return new TransmissionResult(error: $"Status: {ex.Status}, Message: {ex.Message}");
             }
             catch (Exception ex)
             {
                 Log(LogLevel.Error, "Exception occured in EnqueueMessage Message:{}, Status: {}", ex.Message);
-                return new TransmissionResult()
-                {
-                    IsError=true,
-                    Error=ex.Message
-                };
+                return new TransmissionResult(error:ex.Message);
             }
         }
 
@@ -72,51 +59,26 @@ namespace KubeMQ.Contract.SDK.Connection
                 if (res==null)
                 {
                     Log(LogLevel.Error, "EnqueueMessages response for {} is null from KubeMQ server", msg.ID);
-                    return new BatchTransmissionResult()
-                    {
-                        MessageID=msg.ID,
-                        Results=new ITransmissionResult[]
+                    return new BatchTransmissionResult(id:msg.ID,results:new ITransmissionResult[]
                         {
-                            new TransmissionResult()
-                            {
-                                IsError=true,
-                                Error="null response recieved from KubeMQ host"
-                            }
+                            new TransmissionResult(error:"null response recieved from KubeMQ host")
                         }
-                    };
+                    );
                 }
                 Log(LogLevel.Information, "Transmission Result for EnqueueMessages {} (Count:{})", msg.ID, res.Results.Count);
-                return new BatchTransmissionResult()
-                {
-                    MessageID=msg.ID,
-                    Results=res.Results.AsEnumerable<SendQueueMessageResult>().Select(sqmr =>
-                    {
-                        return new TransmissionResult()
-                        {
-                            MessageID=new Guid(sqmr.MessageID),
-                            IsError = !string.IsNullOrEmpty(sqmr.Error),
-                            Error=sqmr.Error
-                        };
-                    })
-                };
+                return new BatchTransmissionResult(id:msg.ID,
+                    results:res.Results.AsEnumerable<SendQueueMessageResult>().Select(sqmr =>new TransmissionResult(id: new Guid(sqmr.MessageID),error:sqmr.Error))
+                );
             }
             catch (RpcException ex)
             {
                 Log(LogLevel.Error, "RPC error occured on EnqueueMessages in send Message:{}, Status: {}", ex.Message, ex.Status);
-                return new BatchTransmissionResult()
-                {
-                    IsError=true,
-                    Error=$"Message: {ex.Message}, Status: {ex.Status}"
-                };
+                return new BatchTransmissionResult(error:$"Status: {ex.Status}, Message: {ex.Message}");
             }
             catch (Exception ex)
             {
                 Log(LogLevel.Error, "Exception occured in EnqueueMessages Message:{}, Status: {}", ex.Message);
-                return new BatchTransmissionResult()
-                {
-                    IsError=true,
-                    Error=ex.Message
-                };
+                return new BatchTransmissionResult(error:ex.Message);
             }
         }
 

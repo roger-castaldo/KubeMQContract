@@ -7,9 +7,7 @@ namespace KubeMQ.Contract.SDK.Connection
     internal partial class Connection : IConnectionBase
     {
         public IPingResult? Ping()
-        {
-            return Ping(this.client);
-        }
+            =>Ping(this.client);
 
         private IPingResult? Ping(KubeClient grpcClient)
         {
