@@ -5,17 +5,16 @@ namespace KubeMQ.Contract.Messages
 {
     internal class TransmittedMessage : TransmissionResult, IMessageHeader
     {
-        private MapField<string, string>? _tags;
-        internal MapField<string, string>? Tags { init { _tags=value; } }
+        internal MapField<string, string>? Tags { get; init; }
 
-        public IEnumerable<string> Keys => (_tags==null ? Array.Empty<string>() : _tags.Keys);
+        public IEnumerable<string> Keys => Tags?.Keys??Array.Empty<string>();
 
         public string? this[string key]
         {
             get
             {
                 string? value = null;
-                _tags?.TryGetValue(key, out value);
+                Tags?.TryGetValue(key, out value);
                 return value;
             }
         }
@@ -27,7 +26,7 @@ namespace KubeMQ.Contract.Messages
                 if (disposing)
                 {
                     // TODO: dispose managed state (managed objects)
-                    _tags=null;
+
                 }
                 base.Dispose(disposing);
             }

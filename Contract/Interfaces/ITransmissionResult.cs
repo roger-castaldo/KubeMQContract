@@ -8,7 +8,7 @@
         /// <summary>
         /// The ID of the message that was generated during transmission
         /// </summary>
-        Guid? MessageID { get; }
+        Guid MessageID { get; }
         /// <summary>
         /// true if there is an error with the message
         /// </summary>

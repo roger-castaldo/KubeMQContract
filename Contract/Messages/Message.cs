@@ -17,7 +17,7 @@ namespace KubeMQ.Contract.Messages
 
         public new string? Error { 
             get {
-                return Exception==null ? base.Error : Exception.Message;
+                return Exception?.Message??base.Error;
             }
             init
             {

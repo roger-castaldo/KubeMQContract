@@ -6,7 +6,7 @@ namespace KubeMQ.Contract.Messages
     {
         protected bool disposedValue;
 
-        public Guid? MessageID { get; init; }
+        public Guid MessageID { get; init; } = Guid.Empty;
 
         public bool IsError { get; init; } = false;
 
