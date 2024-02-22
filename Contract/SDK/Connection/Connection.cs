@@ -33,7 +33,7 @@ namespace KubeMQ.Contract.SDK.Connection
             this.globalMessageEncoder = globalMessageEncoder;
             this.globalMessageEncryptor=globalMessageEncryptor;
             logger = connectionOptions.Logger?.CreateLogger($"KubeMQContract[{id}]");
-            Log(LogLevel.Debug, "Attempting to establish connection to server {}", connectionOptions.Address);
+            Log(LogLevel.Information, "Attempting to establish connection to server {}", connectionOptions.Address);
             addy = this.connectionOptions.Address;
             var match = regURL.Match(addy);
             if (!match.Success)
@@ -67,7 +67,7 @@ namespace KubeMQ.Contract.SDK.Connection
         {
             var client = new KubeClient(addy, connectionOptions.SSLCredentials??ChannelCredentials.Insecure,logger);
             var pingResult = Ping(client)??throw new UnableToConnect();
-            Log(LogLevel.Debug, "Established connection to [Host:{}, Version:{}, StartTime:{}, UpTime:{}]",
+            Log(LogLevel.Information, "Established connection to [Host:{}, Version:{}, StartTime:{}, UpTime:{}]",
                 pingResult.Host,
                 pingResult.Version,
                 pingResult.ServerStartTime,

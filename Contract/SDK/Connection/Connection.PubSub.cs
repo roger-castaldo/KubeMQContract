@@ -28,7 +28,7 @@ namespace KubeMQ.Contract.SDK.Connection
                     Store = msg.Stored,
                     Tags = { msg.Tags }
                 }, connectionOptions.GrpcMetadata, cancellationToken);
-                Log(LogLevel.Information, "Transmission Result for {} (IsError:{},Error:{})", msg.ID, !string.IsNullOrEmpty(res.Error), res.Error);
+                Log(LogLevel.Debug, "Transmission Result for {} (IsError:{},Error:{})", msg.ID, !string.IsNullOrEmpty(res.Error), res.Error);
                 return new TransmissionResult(id:new Guid(msg.ID),res.Error);
             }
             catch (RpcException ex)

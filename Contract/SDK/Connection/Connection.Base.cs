@@ -11,11 +11,11 @@ namespace KubeMQ.Contract.SDK.Connection
 
         private IPingResult? Ping(KubeClient grpcClient)
         {
-            Log(LogLevel.Information, "Calling ping to {}", connectionOptions.Address);
+            Log(LogLevel.Debug, "Calling ping to {}", connectionOptions.Address);
             var rec = grpcClient.Ping();
             if (rec==null)
                 return null;
-            Log(LogLevel.Information, "Pind result to {} Uptime seconds {}", connectionOptions.Address, rec.ServerUpTimeSeconds);
+            Log(LogLevel.Information, "Ping result to {} Uptime seconds {}", connectionOptions.Address, rec.ServerUpTimeSeconds);
             return new KubeMQ.Contract.SDK.PingResult(rec);
         }
 

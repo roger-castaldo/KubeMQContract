@@ -29,7 +29,7 @@ namespace KubeMQ.Contract.SDK.Connection
                     Policy = msg.Policy,
                     Attributes = msg.Attributes
                 }, connectionOptions.GrpcMetadata, cancellationToken);
-                Log(LogLevel.Information, "Transmission Result for EnqueueMessage {} (IsError:{},Error:{})", msg.ID, !string.IsNullOrEmpty(res.Error), res.Error);
+                Log(LogLevel.Debug, "Transmission Result for EnqueueMessage {} (IsError:{},Error:{})", msg.ID, !string.IsNullOrEmpty(res.Error), res.Error);
                 return new TransmissionResult(id:new Guid(msg.ID),error:res.Error);
             }
             catch (RpcException ex)
@@ -65,7 +65,7 @@ namespace KubeMQ.Contract.SDK.Connection
                         }
                     );
                 }
-                Log(LogLevel.Information, "Transmission Result for EnqueueMessages {} (Count:{})", msg.ID, res.Results.Count);
+                Log(LogLevel.Debug, "Transmission Result for EnqueueMessages {} (Count:{})", msg.ID, res.Results.Count);
                 return new BatchTransmissionResult(id:msg.ID,
                     results:res.Results.AsEnumerable<SendQueueMessageResult>().Select(sqmr =>new TransmissionResult(id: new Guid(sqmr.MessageID),error:sqmr.Error))
                 );

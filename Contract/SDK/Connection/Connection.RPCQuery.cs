@@ -38,7 +38,7 @@ namespace KubeMQ.Contract.SDK.Connection
                     Log(LogLevel.Error, "Transmission Result for RPC {} is null", msg.ID);
                     return new ResultMessage<R>(error: "null response recieved from KubeMQ server");
                 }
-                Log(LogLevel.Information, "Transmission Result for RPC {} (IsError:{},Error:{})", msg.ID, !string.IsNullOrEmpty(res.Error), res.Error);
+                Log(LogLevel.Debug, "Transmission Result for RPC {} (IsError:{},Error:{})", msg.ID, !string.IsNullOrEmpty(res.Error), res.Error);
                 if (!res.Executed || !string.IsNullOrEmpty(res.Error))
                     return new ResultMessage<R>(error:res.Error);
                 return responseFactory.ConvertMessage(logger, res);
