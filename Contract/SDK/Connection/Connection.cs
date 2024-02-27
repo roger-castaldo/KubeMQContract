@@ -23,15 +23,19 @@ namespace KubeMQ.Contract.SDK.Connection
         private IEnumerable<ITypeFactory> typeFactories;
         private bool disposedValue;
         private readonly string addy;
+        private readonly int messageSize;
         private readonly ILogger? logger;
 
         public Connection(ConnectionOptions connectionOptions, IMessageEncoder? globalMessageEncoder, IMessageEncryptor? globalMessageEncryptor)
         {
+            if ((long)connectionOptions.MaxBodySize+4096 > (long)int.MaxValue)
+                throw new ArgumentException($"The maximum body size is too large, it cannot exceed {int.MaxValue-4096}");
             id=Guid.NewGuid();
             clientID = $"{connectionOptions.ClientId}[{id}]";
             this.connectionOptions = connectionOptions;
             this.globalMessageEncoder = globalMessageEncoder;
             this.globalMessageEncryptor=globalMessageEncryptor;
+            messageSize=connectionOptions.MaxBodySize+4096;
             logger = connectionOptions.Logger?.CreateLogger($"KubeMQContract[{id}]");
             Log(LogLevel.Information, "Attempting to establish connection to server {}", connectionOptions.Address);
             addy = this.connectionOptions.Address;
@@ -65,7 +69,7 @@ namespace KubeMQ.Contract.SDK.Connection
 
         private KubeClient EstablishConnection()
         {
-            var client = new KubeClient(addy, connectionOptions.SSLCredentials??ChannelCredentials.Insecure,logger);
+            var client = new KubeClient(addy, connectionOptions.SSLCredentials??ChannelCredentials.Insecure, messageSize, logger);
             var pingResult = Ping(client)??throw new UnableToConnect();
             Log(LogLevel.Information, "Established connection to [Host:{}, Version:{}, StartTime:{}, UpTime:{}]",
                 pingResult.Host,

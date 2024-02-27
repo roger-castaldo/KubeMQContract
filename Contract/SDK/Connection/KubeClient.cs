@@ -30,16 +30,18 @@ namespace KubeMQ.Contract.SDK.Connection
         private readonly string address;
         private readonly ChannelCredentials credentials;
         private readonly ILogger? logger;
+        private readonly int messageSize;
         private GrpcChannel channel;
         private kubemq.kubemqClient client;
         private bool disposedValue;
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        public KubeClient(string address, ChannelCredentials credentials, ILogger? logger)
+        public KubeClient(string address, ChannelCredentials credentials,int messageSize, ILogger? logger)
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
             this.address=address;
             this.credentials = credentials;
+            this.messageSize=messageSize;
             this.logger = logger;
             ProduceClient();
         }
@@ -48,6 +50,8 @@ namespace KubeMQ.Contract.SDK.Connection
         {
             channel = GrpcChannel.ForAddress(address, new GrpcChannelOptions()
             {
+                MaxReceiveMessageSize = messageSize,
+                MaxSendMessageSize = messageSize,
                 Credentials=credentials,
                 HttpHandler = new SocketsHttpHandler
                 {
@@ -175,6 +179,13 @@ namespace KubeMQ.Contract.SDK.Connection
                 if (disposing)
                 {
                     // TODO: dispose managed state (managed objects)
+                    try
+                    {
+                        channel.ShutdownAsync().Wait();
+                    }catch(Exception ex)
+                    {
+                        logger?.LogError(ex.Message);
+                    }
                     channel.Dispose();
                 }
 

@@ -12,7 +12,7 @@ var opts = new ConnectionOptions()
 //Create subscriber
 var conn = opts.EstablishPubSubConnection();
 
-var jsonListener = conn.Subscribe<Hello2>(message =>
+var jsonListener = conn.SubscribeToPubSub<Hello2>(message =>
     {
         System.Diagnostics.Debug.WriteLine($"Delay: {DateTime.Now.Subtract(message.Timestamp).TotalMilliseconds - DateTime.Now.Subtract(message.ConversionTimestamp).TotalMilliseconds} ms");
         Console.WriteLine($"Greetings {message.Data.Salutation} {message.Data.FirstName} {message.Data.LastName}");
@@ -41,7 +41,7 @@ Console.WriteLine($"Result 1 is Error: {result1.IsError}");
 Console.WriteLine($"Result 2 is Error: {result2.IsError}");
 
 //Create subscriber to listen to HelloProto (protobuf encoded message) channel and convert to Hello2 for logging
-var protoListener = conn.Subscribe<Hello2>(message =>
+var protoListener = conn.SubscribeToPubSub<Hello2>(message =>
     {
         Console.WriteLine($"Greetings {message.Data.Salutation} {message.Data.FirstName} {message.Data.LastName}");
     },

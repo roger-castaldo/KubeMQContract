@@ -10,7 +10,7 @@ var opts = new ConnectionOptions()
 var conn = opts.EstablishRPCQueryConnection(globalMessageEncryptor:new GlobalEncryptor());
 
 //Add listener for Query
-var listener = conn.SubscribeRPCQuery<Hello2, Greeting>(
+var listener = conn.SubscribeToRPCQuery<Hello2, Greeting>(
     message =>
     {
         return new TaggedResponse<Greeting>()

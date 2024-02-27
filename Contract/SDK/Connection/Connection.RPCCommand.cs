@@ -51,14 +51,20 @@ namespace KubeMQ.Contract.SDK.Connection
             }
         }
 
-        public Guid SubscribeRPCCommand<T>(Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<bool>> processMessage, Action<Exception> errorRecieved, string? channel = null, string group = "", bool ignoreMessageHeader = false, CancellationToken cancellationToken = default)
-            => ProduceRPCCommandSubscription<T>(processMessage,errorRecieved,channel,group,true,ignoreMessageHeader,cancellationToken);
+        public Guid SubscribeToRPCCommand<T>(Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<bool>> processMessage, Action<Exception> errorRecieved, string? channel = null, string group = "", bool ignoreMessageHeader = false, CancellationToken cancellationToken = default)
+            => ProduceRPCCommandSubscription<T>((msg)=>Task.FromResult(processMessage(msg)),errorRecieved,channel,group,true,ignoreMessageHeader,cancellationToken);
 
-        public Guid SubscribeRPCCommandAsync<T>(Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<bool>> processMessage, Action<Exception> errorRecieved, string? channel = null, string group = "", bool ignoreMessageHeader = false, CancellationToken cancellationToken = default)
-            => ProduceRPCCommandSubscription<T>(processMessage, errorRecieved, channel, group, false,ignoreMessageHeader, cancellationToken);
+        public Guid SubscribeToRPCCommand<T>(Func<Contract.Interfaces.Messages.IMessage<T>, Task<TaggedResponse<bool>>> processMessage, Action<Exception> errorRecieved, string? channel = null, string group = "", bool ignoreMessageHeader = false, CancellationToken cancellationToken = default)
+            => ProduceRPCCommandSubscription<T>(processMessage, errorRecieved, channel, group, true, ignoreMessageHeader, cancellationToken);
+
+        public Guid SubscribeToRPCCommandAsync<T>(Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<bool>> processMessage, Action<Exception> errorRecieved, string? channel = null, string group = "", bool ignoreMessageHeader = false, CancellationToken cancellationToken = default)
+            => ProduceRPCCommandSubscription<T>((msg) => Task.FromResult(processMessage(msg)), errorRecieved, channel, group, false,ignoreMessageHeader, cancellationToken);
+
+        public Guid SubscribeToRPCCommandAsync<T>(Func<Contract.Interfaces.Messages.IMessage<T>, Task<TaggedResponse<bool>>> processMessage, Action<Exception> errorRecieved, string? channel = null, string group = "", bool ignoreMessageHeader = false, CancellationToken cancellationToken = default)
+            => ProduceRPCCommandSubscription<T>(processMessage, errorRecieved, channel, group, false, ignoreMessageHeader, cancellationToken);
 
         public Guid ProduceRPCCommandSubscription<T>(
-            Func<Contract.Interfaces.Messages.IMessage<T>, TaggedResponse<bool>> processMessage, 
+            Func<Contract.Interfaces.Messages.IMessage<T>, Task<TaggedResponse<bool>>> processMessage, 
             Action<Exception> errorRecieved, 
             string? channel, 
             string group, 
@@ -78,7 +84,7 @@ namespace KubeMQ.Contract.SDK.Connection
                     {
                         try
                         {
-                            return Task.FromResult(processMessage(msg));
+                            return processMessage(msg);
                         }
                         catch (Exception) { throw; }
                     }),

@@ -38,12 +38,34 @@ namespace KubeMQ.Contract.Interfaces.Connections
         /// and simply decode the message under the assumption that it is of type T</param>
         /// <param name="cancellationToken">A cancellation token used to stop the subscription</param>
         /// <returns>A unique ID for this particular subscription that can be used to Unsubscribe</returns>
-        Guid SubscribeRPCCommand<T>(
+        Guid SubscribeToRPCCommand<T>(
             Func<IMessage<T>, TaggedResponse<bool>> processMessage,
             Action<Exception> errorRecieved,
             string? channel = null,
             string group = "",
             bool ignoreMessageHeader=false,
+            CancellationToken cancellationToken = new CancellationToken()
+        );
+
+        /// <summary>
+        /// Called to create a subscription to a RPC style Event channel where messages are processed
+        /// one at a time, but a Task is required in the callback
+        /// </summary>
+        /// <typeparam name="T">The type of message to listen for</typeparam>
+        /// <param name="processMessage">The callback to be called when a message is recieved and a response is needed</param>
+        /// <param name="errorRecieved">The callback to be called if an error is recieved</param>
+        /// <param name="channel">The name of the channel to transmit into.  If this is not specified here, a MessageChannel attribute is expected on T</param>
+        /// <param name="group">The name of a group to be subscribed as, this is used if there is more than one instance of a listener (multiple pods).  The messages will be round robined inside each group.</param>
+        /// <param name="ignoreMessageHeader">If set to true, the library will ignore the message header which is used to tag the message type.  This will ignore all conversion attempts 
+        /// and simply decode the message under the assumption that it is of type T</param>
+        /// <param name="cancellationToken">A cancellation token used to stop the subscription</param>
+        /// <returns>A unique ID for this particular subscription that can be used to Unsubscribe</returns>
+        Guid SubscribeToRPCCommand<T>(
+            Func<IMessage<T>, Task<TaggedResponse<bool>>> processMessage,
+            Action<Exception> errorRecieved,
+            string? channel = null,
+            string group = "",
+            bool ignoreMessageHeader = false,
             CancellationToken cancellationToken = new CancellationToken()
         );
 
@@ -60,8 +82,30 @@ namespace KubeMQ.Contract.Interfaces.Connections
         /// and simply decode the message under the assumption that it is of type T</param>
         /// <param name="cancellationToken">A cancellation token used to stop the subscription</param>
         /// <returns>A unique ID for this particular subscription that can be used to Unsubscribe</returns>
-        Guid SubscribeRPCCommandAsync<T>(
+        Guid SubscribeToRPCCommandAsync<T>(
             Func<IMessage<T>, TaggedResponse<bool>> processMessage,
+            Action<Exception> errorRecieved,
+            string? channel = null,
+            string group = "",
+            bool ignoreMessageHeader = false,
+            CancellationToken cancellationToken = new CancellationToken()
+        );
+
+        /// <summary>
+        /// Called to create a subscription to a RPC style Event channel where messages are processed
+        /// in individual non awaited tasks, but a Task is required in the callback
+        /// </summary>
+        /// <typeparam name="T">The type of message to listen for</typeparam>
+        /// <param name="processMessage">The callback to be called when a message is recieved and a response is needed</param>
+        /// <param name="errorRecieved">The callback to be called if an error is recieved</param>
+        /// <param name="channel">The name of the channel to transmit into.  If this is not specified here, a MessageChannel attribute is expected on T</param>
+        /// <param name="group">The name of a group to be subscribed as, this is used if there is more than one instance of a listener (multiple pods).  The messages will be round robined inside each group.</param>
+        /// <param name="ignoreMessageHeader">If set to true, the library will ignore the message header which is used to tag the message type.  This will ignore all conversion attempts 
+        /// and simply decode the message under the assumption that it is of type T</param>
+        /// <param name="cancellationToken">A cancellation token used to stop the subscription</param>
+        /// <returns>A unique ID for this particular subscription that can be used to Unsubscribe</returns>
+        Guid SubscribeToRPCCommandAsync<T>(
+            Func<IMessage<T>, Task<TaggedResponse<bool>>> processMessage,
             Action<Exception> errorRecieved,
             string? channel = null,
             string group = "",

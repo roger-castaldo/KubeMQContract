@@ -43,14 +43,30 @@ namespace KubeMQ.Contract.SDK.Connection
             }
         }
 
-        public Guid Subscribe<T>(Action<KubeMQ.Contract.Interfaces.Messages.IMessage<T>> messageRecieved, Action<Exception> errorRecieved, string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null,bool ignoreMessageHeader=false, CancellationToken cancellationToken = new CancellationToken())
+        public Guid SubscribeToPubSub<T>(Action<KubeMQ.Contract.Interfaces.Messages.IMessage<T>> messageRecieved, Action<Exception> errorRecieved, string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null,bool ignoreMessageHeader=false, CancellationToken cancellationToken = new CancellationToken())
+            => CreateSubscription<T>((msg)=>
+            {
+                messageRecieved(msg);
+                return Task.CompletedTask;
+            }, 
+                errorRecieved, channel, group, storageOffset, messageReadStyle, true,ignoreMessageHeader, cancellationToken);
+
+        public Guid SubscribeToPubSub<T>(Func<KubeMQ.Contract.Interfaces.Messages.IMessage<T>, Task> messageRecieved, Action<Exception> errorRecieved, string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null, bool ignoreMessageHeader = false, CancellationToken cancellationToken = new CancellationToken())
             => CreateSubscription<T>(messageRecieved, errorRecieved, channel, group, storageOffset, messageReadStyle, true,ignoreMessageHeader, cancellationToken);
 
-        public Guid SubscribeAsync<T>(Action<KubeMQ.Contract.Interfaces.Messages.IMessage<T>> messageRecieved, Action<Exception> errorRecieved, string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null, bool ignoreMessageHeader = false, CancellationToken cancellationToken = new CancellationToken())
-            => CreateSubscription<T>(messageRecieved,errorRecieved,channel,group,storageOffset,messageReadStyle,false,ignoreMessageHeader,cancellationToken);
+        public Guid SubscribeToPubSubAsync<T>(Action<KubeMQ.Contract.Interfaces.Messages.IMessage<T>> messageRecieved, Action<Exception> errorRecieved, string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null, bool ignoreMessageHeader = false, CancellationToken cancellationToken = new CancellationToken())
+            => CreateSubscription<T>((msg) =>
+            {
+                messageRecieved(msg);
+                return Task.CompletedTask;
+            },
+                errorRecieved,channel,group,storageOffset,messageReadStyle,false,ignoreMessageHeader,cancellationToken);
+
+        public Guid SubscribeToPubSubAsync<T>(Func<KubeMQ.Contract.Interfaces.Messages.IMessage<T>, Task> messageRecieved, Action<Exception> errorRecieved, string? channel = null, string group = "", long storageOffset = 0, MessageReadStyle? messageReadStyle = null, bool ignoreMessageHeader = false, CancellationToken cancellationToken = new CancellationToken())
+            => CreateSubscription<T>(messageRecieved,errorRecieved, channel, group, storageOffset, messageReadStyle, false, ignoreMessageHeader, cancellationToken);
 
         private Guid CreateSubscription<T>(
-            Action<KubeMQ.Contract.Interfaces.Messages.IMessage<T>> messageRecieved,
+            Func<KubeMQ.Contract.Interfaces.Messages.IMessage<T>,Task> messageRecieved,
             Action<Exception> errorRecieved,
             string? channel,
             string group,
@@ -72,8 +88,7 @@ namespace KubeMQ.Contract.SDK.Connection
                         msg => {
                             try
                             {
-                                messageRecieved(msg);
-                                return Task.CompletedTask;
+                                return messageRecieved(msg);
                             }
                             catch (Exception) { throw; }
                         }

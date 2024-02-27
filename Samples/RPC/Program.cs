@@ -11,9 +11,10 @@ var opts = new ConnectionOptions()
 var conn = opts.EstablishRPCQueryConnection();
 
 //Add listener for Query
-var listener = conn.SubscribeRPCQuery<Hello2, Greeting>(
-    message =>
+var listener = conn.SubscribeToRPCQuery<Hello2, Greeting>(
+    async (message) =>
     {
+        await Task.Delay(TimeSpan.FromMilliseconds(5));
         System.Diagnostics.Debug.WriteLine($"Delay: {DateTime.Now.Subtract(message.Timestamp).TotalMilliseconds - DateTime.Now.Subtract(message.ConversionTimestamp).TotalMilliseconds} ms");
         return new TaggedResponse<Greeting>()
         {
@@ -58,7 +59,7 @@ conn.Unsubscribe(listener);
 //Add listener for commands
 var commandConn = opts.EstablishRPCCommandConnection();
 
-listener = commandConn.SubscribeRPCCommand<Hello2>(
+listener = commandConn.SubscribeToRPCCommand<Hello2>(
     message =>
     {
         Console.WriteLine($"Greetings {message.Data.Salutation} {message.Data.FirstName} {message.Data.LastName}");

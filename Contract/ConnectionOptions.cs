@@ -11,6 +11,7 @@ namespace KubeMQ.Contract
     /// </summary>
     public class ConnectionOptions
     {
+        private const int DEFAULT_MAX_SIZE = 1024 * 1024 * 100; // 100MB
         /// <summary>
         /// The address and port to connection to.  This can be the dns name or an ip address.
         /// Use the format {ip/name}:{portnumber}.  Typically KubeMQ is configured to listen on 
@@ -42,11 +43,11 @@ namespace KubeMQ.Contract
         /// </summary>
         public int ReconnectInterval { get; init; } = 1000;
         /// <summary>
-        /// The maximum body size in bytes configured on the KubeMQ server, default is 4096.
+        /// The maximum body size in bytes configured on the KubeMQ server, default is 100MB.
         /// If the encoded message exceeds the size, it will zip it in an attempt to transmit the 
         /// message.  If it still fails in size, an exception will be thrown.
         /// </summary>
-        public int MaxBodySize { get; init; } = 0;
+        public int MaxBodySize { get; init; } = DEFAULT_MAX_SIZE;
         /// <summary>
         /// The ILoggerProvider instance to use for logging against any connections produced by these options.
         /// </summary>
