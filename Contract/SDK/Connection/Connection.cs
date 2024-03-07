@@ -87,7 +87,7 @@ namespace KubeMQ.Contract.SDK.Connection
             dataLock.ExitReadLock();
             if (result==null)
             {
-                result = new TypeFactory<T>(globalMessageEncoder,globalMessageEncryptor,ignoreMessageHeader);
+                result = new TypeFactory<T>(globalMessageEncoder,globalMessageEncryptor,connectionOptions.ServiceProvider,ignoreMessageHeader);
                 dataLock.EnterWriteLock();
                 if (!typeFactories.Any(fact => fact.GetType().GetGenericArguments()[0]==typeof(T) && fact.IgnoreMessageHeader==ignoreMessageHeader))
                     typeFactories = typeFactories.Concat(new ITypeFactory[] { (ITypeFactory)result });

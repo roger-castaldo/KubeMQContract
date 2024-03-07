@@ -52,6 +52,10 @@ namespace KubeMQ.Contract
         /// The ILoggerProvider instance to use for logging against any connections produced by these options.
         /// </summary>
         public ILoggerProvider? Logger { get; init; } = null;
+        /// <summary>
+        /// The IServiceProvider instance that can be used for dependency injection when constructing encryptors and converters if needed
+        /// </summary>
+        public IServiceProvider? ServiceProvider { get; init; } = null;
 
         internal SslCredentials? SSLCredentials
         {

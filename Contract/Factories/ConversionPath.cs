@@ -2,6 +2,7 @@
 using KubeMQ.Contract.Interfaces.Conversion;
 using KubeMQ.Contract.Interfaces.Messages;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace KubeMQ.Contract.Factories
 {
@@ -13,17 +14,25 @@ namespace KubeMQ.Contract.Factories
         private readonly IMessageEncoder? globalMessageEncoder;
         private readonly IMessageEncryptor? globalMessageEncryptor;
 
-        public ConversionPath(IEnumerable<object> path,IEnumerable<Type> types, IMessageEncoder? globalMessageEncoder, IMessageEncryptor? globalMessageEncryptor)
+        public ConversionPath(IEnumerable<object> path,IEnumerable<Type> types, IMessageEncoder? globalMessageEncoder, IMessageEncryptor? globalMessageEncryptor,IServiceProvider? serviceProvider)
         {
             this.path = path;
             this.globalMessageEncoder = globalMessageEncoder;
             this.globalMessageEncryptor = globalMessageEncryptor;
-            messageEncoder = (IMessageTypeEncoder<T>)Activator.CreateInstance(types
-                .FirstOrDefault(type => type.GetInterfaces().Any(iface => iface==typeof(IMessageTypeEncoder<T>)), typeof(JsonEncoder<T>))
-                )!;
-            messageEncryptor = (IMessageTypeEncryptor<T>)Activator.CreateInstance(types
-                .FirstOrDefault(type => type.GetInterfaces().Any(iface => iface==typeof(IMessageTypeEncryptor<T>)), typeof(NonEncryptor<T>))
-                )!;
+            var encoderType = types
+                .FirstOrDefault(type => type.GetInterfaces().Any(iface => iface==typeof(IMessageTypeEncoder<T>)), typeof(JsonEncoder<T>));
+            var encryptorType = types
+                .FirstOrDefault(type => type.GetInterfaces().Any(iface => iface==typeof(IMessageTypeEncryptor<T>)), typeof(NonEncryptor<T>));
+            if (serviceProvider!=null)
+            {
+                messageEncoder = (IMessageTypeEncoder<T>)ActivatorUtilities.CreateInstance(serviceProvider, encoderType, Array.Empty<object>());
+                messageEncryptor = (IMessageTypeEncryptor<T>)ActivatorUtilities.CreateInstance(serviceProvider, encryptorType, Array.Empty<object>());
+            }
+            else
+            {
+                messageEncoder = (IMessageTypeEncoder<T>)Activator.CreateInstance(encoderType)!;
+                messageEncryptor = (IMessageTypeEncryptor<T>)Activator.CreateInstance(encryptorType)!;
+            }
         }
 
         public V? ConvertMessage(ILogger? logger, Stream stream, IMessageHeader messageHeader)

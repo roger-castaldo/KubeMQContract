@@ -8,6 +8,7 @@ using KubeMQ.Contract.Messages;
 using KubeMQ.Contract.SDK.Grpc;
 using KubeMQ.Contract.SDK.Interfaces;
 using KubeMQ.Contract.SDK.Messages;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.IO.Compression;
 using System.Reflection;
@@ -36,7 +37,7 @@ namespace KubeMQ.Contract.Factories
         private readonly bool stored = typeof(T).GetCustomAttributes<StoredMessage>().FirstOrDefault() != null;
         private readonly int requestTimeout = typeof(T).GetCustomAttributes<MessageResponseTimeout>().Select(mrt => mrt.Value).FirstOrDefault(5000);
 
-        public TypeFactory(IMessageEncoder? globalMessageEncoder, IMessageEncryptor? globalMessageEncryptor, bool ignoreMessageHeader)
+        public TypeFactory(IMessageEncoder? globalMessageEncoder, IMessageEncryptor? globalMessageEncryptor,IServiceProvider? serviceProvider, bool ignoreMessageHeader)
         {
             this.globalMessageEncoder = globalMessageEncoder;
             this.globalMessageEncryptor = globalMessageEncryptor;
@@ -49,42 +50,57 @@ namespace KubeMQ.Contract.Factories
                     {
                         return assembly.GetTypes()
                         .Where(t => !t.IsInterface && !t.IsAbstract 
-                            && t.GetInterfaces().Any(iface => iface==typeof(IMessageTypeEncoder<T>) || iface==typeof(IMessageTypeEncryptor<T>)));
+                            && t.GetInterfaces().Any(iface => iface==typeof(IMessageTypeEncoder<T>) 
+                                || iface==typeof(IMessageTypeEncryptor<T>) 
+                                || (iface.IsGenericType && iface.GetGenericTypeDefinition()==typeof(IMessageConverter<,>))));
                     }
                     catch (Exception)
                     {
                         return Array.Empty<Type>();
                     }
                 });
-            messageEncoder = (IMessageTypeEncoder<T>)Activator.CreateInstance(types
-                .FirstOrDefault(type => type.GetInterfaces().Any(iface => iface==typeof(IMessageTypeEncoder<T>)), typeof(JsonEncoder<T>))
-                )!;
-            messageEncryptor = (IMessageTypeEncryptor<T>)Activator.CreateInstance(types
-                .FirstOrDefault(type => type.GetInterfaces().Any(iface => iface==typeof(IMessageTypeEncryptor<T>)), typeof(NonEncryptor<T>))
-                )!;
+            var encoderType = types
+                .FirstOrDefault(type => type.GetInterfaces().Any(iface => iface==typeof(IMessageTypeEncoder<T>)), typeof(JsonEncoder<T>));
+            var encryptorType = types
+                .FirstOrDefault(type => type.GetInterfaces().Any(iface => iface==typeof(IMessageTypeEncryptor<T>)), typeof(NonEncryptor<T>));
+            if (serviceProvider!=null)
+            {
+                messageEncoder = (IMessageTypeEncoder<T>)ActivatorUtilities.CreateInstance(serviceProvider, encoderType, Array.Empty<object>());
+                messageEncryptor = (IMessageTypeEncryptor<T>)ActivatorUtilities.CreateInstance(serviceProvider, encryptorType, Array.Empty<object>());
+            }
+            else
+            {
+                messageEncoder = (IMessageTypeEncoder<T>)Activator.CreateInstance(encoderType)!;
+                messageEncryptor = (IMessageTypeEncryptor<T>)Activator.CreateInstance(encryptorType)!;
+            }
             converters = (IgnoreMessageHeader
                 ? Array.Empty<IConversionPath<T>>() 
-                : TraceConverters(typeof(T), globalMessageEncoder, globalMessageEncryptor, types, Array.Empty<object>(), Array.Empty<IConversionPath<T>>()));
+                : TraceConverters(typeof(T), globalMessageEncoder, globalMessageEncryptor, types, Array.Empty<object>(), Array.Empty<IConversionPath<T>>(),serviceProvider));
         }
 
-        private static IEnumerable<IConversionPath<T>> TraceConverters(Type destinationType, IMessageEncoder? globalMessageEncoder, IMessageEncryptor? globalMessageEncryptor, IEnumerable<Type> types,IEnumerable<object> curPath, IEnumerable<IConversionPath<T>> converters)
+        private static IEnumerable<IConversionPath<T>> TraceConverters(Type destinationType, IMessageEncoder? globalMessageEncoder, IMessageEncryptor? globalMessageEncryptor, IEnumerable<Type> types, IEnumerable<object> curPath, IEnumerable<IConversionPath<T>> converters, IServiceProvider? serviceProvider)
         {
             var subPaths = types.Where(t => t.GetInterfaces().Any(iface => iface.IsGenericType &&
                 iface.GetGenericTypeDefinition()==typeof(IMessageConverter<,>)
                 && iface.GetGenericArguments()[1]==destinationType
                 && !converters.Any(conv => conv.GetType().GetGenericArguments()[0]==iface.GetGenericArguments()[0]))
             )
-                .Select(t => curPath.Prepend(Activator.CreateInstance(t)!));
+                .Select(t => curPath.Prepend((serviceProvider==null ? Activator.CreateInstance(t)! : ActivatorUtilities.CreateInstance(serviceProvider, t, Array.Empty<object>()))));
 
             var results = converters.Concat(
-                subPaths.Select(path => (IConversionPath<T>)Activator.CreateInstance(typeof(ConversionPath<,>).MakeGenericType(new Type[] {
-                    ExtractGenericArguements(path.First().GetType())[0],
-                    typeof(T)
-                }), path,types,globalMessageEncoder,globalMessageEncryptor)!)
+                subPaths.Select(path =>
+                {
+                    var args = new object[] { path, types, globalMessageEncoder, globalMessageEncryptor, serviceProvider };
+                    var type = typeof(ConversionPath<,>).MakeGenericType(new Type[] {
+                        ExtractGenericArguements(path.First().GetType())[0],
+                        typeof(T)
+                    });
+                    return (IConversionPath<T>)(serviceProvider==null ? Activator.CreateInstance(type, args)! : ActivatorUtilities.CreateInstance(serviceProvider, type, args));
+                })
             );
 
             foreach (var path in subPaths)
-                results = TraceConverters(ExtractGenericArguements(path.First().GetType())[0], globalMessageEncoder, globalMessageEncryptor, types, path, results);
+                results = TraceConverters(ExtractGenericArguements(path.First().GetType())[0], globalMessageEncoder, globalMessageEncryptor, types, path, results,serviceProvider);
 
             return results;
         }
@@ -162,7 +178,7 @@ namespace KubeMQ.Contract.Factories
                 return new Message<T>(id, ConvertData(logger, metaData, body, tags), timestamp: timestamp, tags: tags);
             }catch (Exception e)
             {
-                System.Diagnostics.Debug.WriteLine(System.Text.UTF8Encoding.UTF8.GetString(body.ToArray()));
+                logger?.LogError("Message Conversion Error: {}", e);
                 return new Message<T>(id,timestamp: timestamp, tags: tags, exception:e);
             }
         }
