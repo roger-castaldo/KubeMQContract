@@ -35,7 +35,7 @@ namespace KubeMQ.Contract.Subscriptions
             this.channel = channel??typeof(T).GetCustomAttributes<MessageChannel>().Select(mc => mc.Name).FirstOrDefault(string.Empty);
             if (string.IsNullOrEmpty(this.channel))
                 throw new ArgumentNullException(nameof(channel), "message must have a channel value");
-            logger?.LogTrace("Establishing Message Queue {} for {}", ID, Utility.TypeName<T>());
+            logger?.LogTrace("Establishing Message Queue {SubscriptionID} for {MessageType}", ID, Utility.TypeName<T>());
 
             cancellationToken.Register(() =>
             {
@@ -65,19 +65,19 @@ namespace KubeMQ.Contract.Subscriptions
         {
             get
             {
-                logger?.LogTrace("Checking if Queue {} has more", ID);
+                logger?.LogTrace("Checking if Queue {SubscriptionID} has more", ID);
                 var res = SubmitRequest();
                 var result = res!=null && !res.IsError && string.IsNullOrEmpty(res.Error)&&res.MessagesReceived>0;
-                logger?.LogTrace("Queue {} HasMore result {}", ID, result);
+                logger?.LogTrace("Queue {SubscriptionID} HasMore {result}", ID, result);
                 return result;
             }
         }
 
         public IMessage<T>? Peek()
         {
-            logger?.LogTrace("Peeking Queue {}", ID);
+            logger?.LogTrace("Peeking Queue {SubscriptionID}", ID);
             var res = SubmitRequest();
-            logger?.LogTrace("Peek results for Queue {} (IsError:{},Error:{},MessagesRecieved:{}", ID, res.IsError, res.Error, res.MessagesReceived);
+            logger?.LogTrace("Peek results for Queue {SubscriptionID} (IsError:{IsError},Error:{ErrorMessage},MessagesRecieved:{MessagesCount}", ID, res.IsError, res.Error, res.MessagesReceived);
             if (res!=null && !res.IsError && string.IsNullOrEmpty(res.Error)&&res.MessagesReceived>0)
                 return messageFactory.ConvertMessage(logger,res.Messages.First());
             return default;
@@ -96,9 +96,9 @@ namespace KubeMQ.Contract.Subscriptions
 
         internal IEnumerable<IMessage<T>> Pop(int count, CancellationToken cancellationToken)
         {
-            logger?.LogTrace("Popping Queue {}, count {}", ID, count);
+            logger?.LogTrace("Popping Queue {SubscriptionID}, count {count}", ID, count);
             var res = SubmitRequest(peak:false, count:count,cancellationToken:cancellationToken);
-            logger?.LogTrace("Pop results for Queue {} (IsError:{},Error:{},MessagesRecieved:{}", ID, res.IsError, res.Error, res.MessagesReceived);
+            logger?.LogTrace("Peek results for Queue {SubscriptionID} (IsError:{IsError},Error:{ErrorMessage},MessagesRecieved:{MessagesCount}", ID, res.IsError, res.Error, res.MessagesReceived);
             if (res!=null && !res.IsError && string.IsNullOrEmpty(res.Error)&&res.MessagesReceived>0)
                 return res.Messages.Select(msg => messageFactory.ConvertMessage(logger,msg));
             return Array.Empty<IMessage<T>>();
@@ -112,7 +112,7 @@ namespace KubeMQ.Contract.Subscriptions
                 {
                     if (!CancellationToken.IsCancellationRequested)
                         CancellationToken.Cancel();
-                    logger?.LogTrace("Disposing of Queue {}", ID);
+                    logger?.LogTrace("Disposing of Queue {SubscriptionID}", ID);
                     client.Dispose();
                 }
 

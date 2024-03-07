@@ -37,7 +37,7 @@ namespace KubeMQ.Contract.SDK.Connection
             this.globalMessageEncryptor=globalMessageEncryptor;
             messageSize=connectionOptions.MaxBodySize+4096;
             logger = connectionOptions.Logger?.CreateLogger($"KubeMQContract[{id}]");
-            Log(LogLevel.Information, "Attempting to establish connection to server {}", connectionOptions.Address);
+            Log(LogLevel.Information, "Attempting to establish connection to server {Address}", connectionOptions.Address);
             addy = this.connectionOptions.Address;
             var match = regURL.Match(addy);
             if (!match.Success)
@@ -71,7 +71,7 @@ namespace KubeMQ.Contract.SDK.Connection
         {
             var client = new KubeClient(addy, connectionOptions.SSLCredentials??ChannelCredentials.Insecure, messageSize, logger);
             var pingResult = Ping(client)??throw new UnableToConnect();
-            Log(LogLevel.Information, "Established connection to [Host:{}, Version:{}, StartTime:{}, UpTime:{}]",
+            Log(LogLevel.Information, "Established connection to [Host:{Address}, Version:{Version}, StartTime:{ServerStartTime}, UpTime:{ServerUpTime}]",
                 pingResult.Host,
                 pingResult.Version,
                 pingResult.ServerStartTime,

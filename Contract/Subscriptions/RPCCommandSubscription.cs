@@ -24,7 +24,7 @@ namespace KubeMQ.Contract.Subscriptions
 
         protected override AsyncServerStreamingCall<Request> EstablishCall()
         {
-            logger?.LogTrace("Attempting to establish RPC Command subscription {} to {} on channel {} for type {}", ID, options.Address, subscription.Channel, Utility.TypeName<T>());
+            logger?.LogTrace("Attempting to establish RPC Command subscription {SubscriptionID} to {Address} on channel {Channel} for type {MessageType}", ID, options.Address, subscription.Channel, Utility.TypeName<T>());
             return client.SubscribeToRequests(new Subscribe()
             {
                 Channel = subscription.Channel,
@@ -38,7 +38,7 @@ namespace KubeMQ.Contract.Subscriptions
 
         protected override async Task ProcessMessage(SRecievedMessage<Request> message)
         {
-            logger?.LogTrace("Message recieved {} on RPC subscription {}", message.Data.RequestID, ID);
+            logger?.LogTrace("Message recieved {MessageID} on RPC subscription {SubscriptionID}", message.Data.RequestID, ID);
             var msg = incomingFactory.ConvertMessage(logger, message);
             if (msg==null)
                 throw new NullReferenceException(nameof(msg));
@@ -51,7 +51,7 @@ namespace KubeMQ.Contract.Subscriptions
             }
             catch (Exception e)
             {
-                logger?.LogError("Message {} failed on subscription {}.  Message:{}", message.Data.RequestID, ID, e.Message);
+                logger?.LogError("Message {MessageID} failed on subscription {SubscriptionID}.  Message:{ErrorMessage}", message.Data.RequestID, ID, e.Message);
                 errorRecieved(e);
                 try
                 {
@@ -75,7 +75,7 @@ namespace KubeMQ.Contract.Subscriptions
             }
             if (result!=null)
             {
-                logger?.LogTrace("Response generated for {} on RPC subscription {}", message.Data.RequestID, ID);
+                logger?.LogTrace("Response generated for {MessageID} on RPC subscription {SubscriptionID}", message.Data.RequestID, ID);
                 var tags = new MapField<string, string>();
                 if (result.Tags!=null)
                 {

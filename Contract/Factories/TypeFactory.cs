@@ -178,7 +178,7 @@ namespace KubeMQ.Contract.Factories
                 return new Message<T>(id, ConvertData(logger, metaData, body, tags), timestamp: timestamp, tags: tags);
             }catch (Exception e)
             {
-                logger?.LogError("Message Conversion Error: {}", e);
+                logger?.LogError("Message Conversion Error: {@Error}", e);
                 return new Message<T>(id,timestamp: timestamp, tags: tags, exception:e);
             }
         }

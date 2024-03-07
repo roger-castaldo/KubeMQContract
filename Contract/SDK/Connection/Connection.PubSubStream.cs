@@ -23,13 +23,13 @@ namespace KubeMQ.Contract.SDK.Connection
                     messageReadStyle, 
                     cancellationToken)
             );
-            Log(LogLevel.Information, "Registered MessageStream {} of type {}", stream.ID, Utility.TypeName<T>());
+            Log(LogLevel.Information, "Registered MessageStream {SubscriptionID} of type {MessageType}", stream.ID, Utility.TypeName<T>());
             return stream;
         }
 
         public IWritableMessageStream<T> CreateStream<T>(string? channel = null)
         {
-            Log(LogLevel.Information, "Producing a WritableStream of type {}", Utility.TypeName<T>());
+            Log(LogLevel.Information, "Producing a WritableStream of type {MessageType}", Utility.TypeName<T>());
             return new WritableMessageStream<T>(this, channel);
         }
     }

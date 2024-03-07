@@ -17,7 +17,7 @@ namespace KubeMQ.Contract.SDK.Connection
             try
             {
                 var msg = GetMessageFactory<T>().Event(message, connectionOptions,clientID, channel, tagCollection);
-                Log(LogLevel.Information, "Sending Message {} of type {}", msg.ID, Utility.TypeName<T>());
+                Log(LogLevel.Information, "Sending Message {MessageID} of type {MessageType}", msg.ID, Utility.TypeName<T>());
                 var res = await client.SendEventAsync(new Event
                 {
                     EventID = msg.ID,
@@ -28,17 +28,17 @@ namespace KubeMQ.Contract.SDK.Connection
                     Store = msg.Stored,
                     Tags = { msg.Tags }
                 }, connectionOptions.GrpcMetadata, cancellationToken);
-                Log(LogLevel.Debug, "Transmission Result for {} (IsError:{},Error:{})", msg.ID, !string.IsNullOrEmpty(res.Error), res.Error);
+                Log(LogLevel.Debug, "Transmission Result for {MessageID} (IsError:{IsError},Error:{ErrorMessage})", msg.ID, !string.IsNullOrEmpty(res.Error), res.Error);
                 return new TransmissionResult(id:new Guid(msg.ID),res.Error);
             }
             catch (RpcException ex)
             {
-                Log(LogLevel.Error, "RPC error occured on Send in send Message:{}, Status: {}", ex.Message, ex.Status);
+                Log(LogLevel.Error, "RPC error occured on Send in send Message:{ErrorMessage}, Status: {StatusCode}", ex.Message, ex.Status);
                 return new TransmissionResult(error:$"Status: {ex.Status}, Message: {ex.Message}");
             }
             catch (Exception ex)
             {
-                Log(LogLevel.Error, "Exception occured in Send Message:{}", ex.Message);
+                Log(LogLevel.Error, "Exception occured in Send Message:{ErrorMessage}", ex.Message);
                 return new TransmissionResult(error: ex.Message);
             }
         }
@@ -100,7 +100,7 @@ namespace KubeMQ.Contract.SDK.Connection
                     synchronous,
                     cancellationToken)
             );
-            Log(LogLevel.Information, "Registered Subscribe {} of type {}", sub.ID, Utility.TypeName<T>());
+            Log(LogLevel.Information, "Registered Subscribe {SubscriptionID} of type {MessageType}", sub.ID, Utility.TypeName<T>());
             return sub.ID;
         }
     }

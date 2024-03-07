@@ -69,7 +69,7 @@ namespace KubeMQ.Contract.Subscriptions
                     {
                         using var call = EstablishCall();
                         startEvent?.Set();
-                        logger?.LogTrace("Connection for subscription {} established", ID);
+                        logger?.LogTrace("Connection for subscription {SubscriptionID} established", ID);
                         var writer = channel.Writer;
                         await foreach (var resp in call.ResponseStream.ReadAllAsync(cancellationToken.Token))
                         {
@@ -95,10 +95,10 @@ namespace KubeMQ.Contract.Subscriptions
                                 case StatusCode.Unavailable:
                                 case StatusCode.DataLoss:
                                 case StatusCode.DeadlineExceeded:
-                                    logger?.LogTrace("RPC Error recieved on subscription {}, retrying connection after delay {}ms.  StatusCode:{},Message:{}", ID, options.ReconnectInterval, rpcx.StatusCode, rpcx.Message);
+                                    logger?.LogTrace("RPC Error recieved on subscription {SubscriptionID}, retrying connection after delay {ReconnectDelay}ms.  StatusCode:{StatusCode},Message:{ErrorMessage}", ID, options.ReconnectInterval, rpcx.StatusCode, rpcx.Message);
                                     break;
                                 default:
-                                    logger?.LogError("RPC Error recieved on subscription {}.  StatusCode:{},Message:{}", ID, rpcx.StatusCode, rpcx.Message);
+                                    logger?.LogError("RPC Error recieved on subscription {SubscriptionID}.  StatusCode:{StatusCode},Message:{ErrorMessage}", ID, rpcx.StatusCode, rpcx.Message);
                                     errorRecieved(rpcx);
                                     break;
                             }
@@ -106,7 +106,7 @@ namespace KubeMQ.Contract.Subscriptions
                     }
                     catch (Exception e)
                     {
-                        logger?.LogError("Error recieved on subscription {}.  Message:{}", ID, e.Message);
+                        logger?.LogError("Error recieved on subscription {SubscriptionID}.  Message:{ErrorMessage}", ID, e.Message);
                         errorRecieved(e);
                     }
                     if (active && !cancellationToken.IsCancellationRequested)
@@ -143,7 +143,7 @@ namespace KubeMQ.Contract.Subscriptions
 
         public void Stop()
         {
-            logger?.LogTrace("Stop called for subscription {}", ID);
+            logger?.LogTrace("Stop called for subscription {SubscriptionID}", ID);
             active = false;
             this.cancellationToken.Cancel();
         }

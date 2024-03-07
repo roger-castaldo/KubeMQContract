@@ -34,7 +34,7 @@ namespace KubeMQ.Contract.Subscriptions
 
         protected override AsyncServerStreamingCall<EventReceive> EstablishCall()
         {
-            logger?.LogTrace("Attempting to establish subscription {} to {} on channel {} for type {}", ID, options.Address, subscription.Channel, Utility.TypeName<T>());
+            logger?.LogTrace("Attempting to establish subscription {SubscriptionID} to {Address} on channel {Channel} for type {MessageType}", ID, options.Address, subscription.Channel, Utility.TypeName<T>());
             return client.SubscribeToEvents(new Subscribe()
             {
                 Channel = subscription.Channel,
@@ -50,7 +50,7 @@ namespace KubeMQ.Contract.Subscriptions
 
         protected override async Task ProcessMessage(SRecievedMessage<EventReceive> message)
         {
-            logger?.LogTrace("Message recieved {} on subscription {}", message.Data.EventID, ID);
+            logger?.LogTrace("Message recieved {MessageID} on subscription {SubscriptionID}", message.Data.EventID, ID);
             var msg = messageFactory.ConvertMessage(logger, message);
             if (msg.Exception!=null)
                 throw msg.Exception;
@@ -60,7 +60,7 @@ namespace KubeMQ.Contract.Subscriptions
             }
             catch (Exception ex)
             {
-                logger?.LogError("Message {} failed on subscription {}.  Message:{}", message.Data.EventID, ID, ex.Message);
+                logger?.LogError("Message {MessageID} failed on subscription {SubscriptionID}.  Message:{ErrorMessage}", message.Data.EventID, ID, ex.Message);
                 throw;
             }
         }

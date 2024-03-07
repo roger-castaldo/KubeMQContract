@@ -17,7 +17,7 @@ namespace KubeMQ.Contract.SDK.Connection
             try
             {
                 var msg = GetMessageFactory<T>().Request(message, connectionOptions,clientID, channel, tagCollection, timeout, Request.Types.RequestType.Command);
-                Log(LogLevel.Information, "Sending RPC Command {} of type {}", msg.ID, Utility.TypeName<T>());
+                Log(LogLevel.Information, "Sending RPC Command {MessageID} of type {MessageType}", msg.ID, Utility.TypeName<T>());
                 var res = await client.SendRequestAsync(new Request()
                 {
                     RequestID=msg.ID,
@@ -31,22 +31,22 @@ namespace KubeMQ.Contract.SDK.Connection
                 }, connectionOptions.GrpcMetadata, cancellationToken);
                 if (res==null)
                 {
-                    Log(LogLevel.Error, "Transmission Result for RPC {} is null", msg.ID);
+                    Log(LogLevel.Error, "Transmission Result for RPC {MessageID} is null", msg.ID);
                     return new ResultMessage<bool>(error: "null response recieved from KubeMQ server");
                 }
-                Log(LogLevel.Debug, "Transmission Result for RPC {} (IsError:{},Error:{})", msg.ID, !string.IsNullOrEmpty(res.Error), res.Error);
+                Log(LogLevel.Debug, "Transmission Result for RPC {MessageID} (IsError:{IsError},Error:{ErrorMessage})", msg.ID, !string.IsNullOrEmpty(res.Error), res.Error);
                 if (!res.Executed || !string.IsNullOrEmpty(res.Error))
                     return new ResultMessage<bool>(tags: res.Tags, error: res.Error);
                 return new ResultMessage<bool>(id:new Guid(msg.ID), tags: res.Tags, response:res.Executed);
             }
             catch (RpcException ex)
             {
-                Log(LogLevel.Error, "RPC error occured on SendRPC in send Message:{}, Status: {}", ex.Message, ex.Status);
+                Log(LogLevel.Error, "RPC error occured on SendRPC in send Message:{ErrorMessage}, Status: {StatusCode}", ex.Message, ex.Status);
                 return new ResultMessage<bool>(error:$"Status: {ex.Status}, Message: {ex.Message}");
             }
             catch (Exception ex)
             {
-                Log(LogLevel.Error, "Exception occured in SendRPC Message:{}, Status: {}", ex.Message);
+                Log(LogLevel.Error, "Exception occured in SendRPC Message:{ErrorMessage}", ex.Message);
                 return new ResultMessage<bool>(error: ex.Message);
             }
         }
@@ -94,7 +94,7 @@ namespace KubeMQ.Contract.SDK.Connection
                     cancellationToken: cancellationToken
                  )
             );
-            Log(LogLevel.Information, "Registered SubscribeRPCCommand {} of type {}", sub.ID, Utility.TypeName<T>());
+            Log(LogLevel.Information, "Registered SubscribeRPCCommand {SubscriptionID} of type {MessageType}", sub.ID, Utility.TypeName<T>());
             return sub.ID;
         }
     }

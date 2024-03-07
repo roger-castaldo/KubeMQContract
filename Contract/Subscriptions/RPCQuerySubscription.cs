@@ -25,7 +25,7 @@ namespace KubeMQ.Contract.Subscriptions
 
         protected override AsyncServerStreamingCall<Request> EstablishCall()
         {
-            logger?.LogTrace("Attempting to establish RPC Query subscription {} to {} on channel {} for type {} returning type {}", ID, options.Address, subscription.Channel, Utility.TypeName<T>(), Utility.TypeName<R>());
+            logger?.LogTrace("Attempting to establish RPC Query subscription {SubscriptionID} to {Address} on channel {Channel} for type {RequestType} returning type {ResponseType}", ID, options.Address, subscription.Channel, Utility.TypeName<T>(), Utility.TypeName<R>());
             return client.SubscribeToRequests(new Subscribe()
             {
                 Channel = subscription.Channel,
@@ -39,7 +39,7 @@ namespace KubeMQ.Contract.Subscriptions
 
         protected override async Task ProcessMessage(SRecievedMessage<Request> message)
         {
-            logger?.LogTrace("Message recieved {} on RPC subscription {}", message.Data.RequestID, ID);
+            logger?.LogTrace("Message recieved {MessageID} on RPC subscription {SubscriptionID}", message.Data.RequestID, ID);
             var msg = incomingFactory.ConvertMessage(logger, message);
             if (msg==null)
                 throw new NullReferenceException(nameof(msg));
@@ -52,7 +52,7 @@ namespace KubeMQ.Contract.Subscriptions
             }
             catch (Exception ex)
             {
-                logger?.LogError("Message {} failed on subscription {}.  Message:{}", message.Data.RequestID, ID, ex.Message);
+                logger?.LogError("Message {MessageID} failed on subscription {SubscriptionID}.  Message:{ErrorMessage}", message.Data.RequestID, ID, ex.Message);
                 await client.SendResponseAsync(new Response()
                 {
                     RequestID=message.Data.RequestID,
@@ -70,7 +70,7 @@ namespace KubeMQ.Contract.Subscriptions
             if (result!=null)
             {
                 var response = outgoingFactory.Response(result.Response, options, subscription.ClientID, message.Data.ReplyChannel, result.Tags);
-                logger?.LogTrace("Response generated for {} on RPC subscription {}", message.Data.RequestID, ID);
+                logger?.LogTrace("Response generated for {MessageID} on RPC subscription {SubscriptionID}", message.Data.RequestID, ID);
                 try
                 {
                     await client.SendResponseAsync(new Response()
@@ -91,7 +91,7 @@ namespace KubeMQ.Contract.Subscriptions
                 }
                 catch (Exception e)
                 {
-                    logger?.LogError("Response for {} on RPC subscription {} failed to send. Exception: {}", message.Data.RequestID, ID,e.Message);
+                    logger?.LogError("Response for {MessageID} on RPC subscription {SubscriptionID} failed to send. Exception: {ErrorMessage}", message.Data.RequestID, ID,e.Message);
                     throw;
                 }
             }

@@ -11,17 +11,17 @@ namespace KubeMQ.Contract.SDK.Connection
 
         private IPingResult? Ping(KubeClient grpcClient)
         {
-            Log(LogLevel.Debug, "Calling ping to {}", connectionOptions.Address);
+            Log(LogLevel.Debug, "Calling ping to {Address}", connectionOptions.Address);
             var rec = grpcClient.Ping();
             if (rec==null)
                 return null;
-            Log(LogLevel.Information, "Ping result to {} Uptime seconds {}", connectionOptions.Address, rec.ServerUpTimeSeconds);
+            Log(LogLevel.Information, "Ping result to {Address} Uptime seconds {UpTimeSeconds}", connectionOptions.Address, rec.ServerUpTimeSeconds);
             return new KubeMQ.Contract.SDK.PingResult(rec);
         }
 
         public void Unsubscribe(Guid id)
         {
-            Log(LogLevel.Information, "Unsubscribing from {}", id);
+            Log(LogLevel.Information, "Unsubscribing from {SubscriptionID}", id);
             dataLock.EnterWriteLock();
             var sub = subscriptions.FirstOrDefault(s => s.ID == id);
             if (sub!=null)

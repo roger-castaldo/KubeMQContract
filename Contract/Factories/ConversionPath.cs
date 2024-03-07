@@ -41,7 +41,7 @@ namespace KubeMQ.Contract.Factories
             object? result = (globalMessageEncoder!=null && messageEncoder is JsonEncoder<T>? globalMessageEncoder.Decode<T>(stream):messageEncoder.Decode(stream));
             foreach (var converter in path)
             {
-                logger?.LogTrace("Attempting to convert {} to {} through converters for {}", Utility.TypeName<T>(), Utility.TypeName<V>(), Utility.TypeName(ExtractGenericArguements(converter.GetType())[0]));
+                logger?.LogTrace("Attempting to convert {SourceType} to {DestiniationType} through converters for {IntermediateType}", Utility.TypeName<T>(), Utility.TypeName<V>(), Utility.TypeName(ExtractGenericArguements(converter.GetType())[0]));
                 result = ExecuteConverter(converter, result, ExtractGenericArguements(converter.GetType())[1]);
             }
             return (V?)result;
