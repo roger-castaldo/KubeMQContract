@@ -43,8 +43,19 @@ namespace KubeMQ.Contract.Factories
             IgnoreMessageHeader=ignoreMessageHeader;
             var types = AssemblyLoadContext.All
                 .SelectMany(context => context.Assemblies)
-                .SelectMany(assembly => assembly.GetTypes())
-                .Where(t => !t.IsInterface && !t.IsAbstract);
+                .SelectMany(assembly =>
+                {
+                    try
+                    {
+                        return assembly.GetTypes()
+                        .Where(t => !t.IsInterface && !t.IsAbstract 
+                            && t.GetInterfaces().Any(iface => iface==typeof(IMessageTypeEncoder<T>) || iface==typeof(IMessageTypeEncryptor<T>)));
+                    }
+                    catch (Exception)
+                    {
+                        return Array.Empty<Type>();
+                    }
+                });
             messageEncoder = (IMessageTypeEncoder<T>)Activator.CreateInstance(types
                 .FirstOrDefault(type => type.GetInterfaces().Any(iface => iface==typeof(IMessageTypeEncoder<T>)), typeof(JsonEncoder<T>))
                 )!;
