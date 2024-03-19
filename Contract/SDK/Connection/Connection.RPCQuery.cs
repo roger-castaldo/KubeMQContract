@@ -21,7 +21,7 @@ namespace KubeMQ.Contract.SDK.Connection
                 if (forcedRType!=null && forcedRType!=typeof(R) && !responseFactory.CanConvertFrom(forcedRType))
                     throw new InvalidQueryResponseTypeSpecified(typeof(T), forcedRType);
                 var msg = GetMessageFactory<T>().Request(message, connectionOptions,clientID, channel, tagCollection, timeout, Request.Types.RequestType.Query);
-                Log(LogLevel.Information, "Sending RPC Message {MessageID} of type {MessageType}", msg.ID, Utility.TypeName<T>());
+                Log(LogLevel.Information, "Sending RPC Query {MessageID} of type {MessageType}", msg.ID, Utility.TypeName<T>());
                 var res = await client.SendRequestAsync(new Request()
                 {
                     RequestID=msg.ID.ToString(),

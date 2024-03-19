@@ -19,7 +19,7 @@ namespace KubeMQ.Contract.SDK.Connection
         private readonly IMessageEncryptor? globalMessageEncryptor;
         private readonly KubeClient client;
         private readonly List<IMessageSubscription> subscriptions;
-        private readonly ReaderWriterLockSlim dataLock = new();
+        private readonly SemaphoreSlim dataLock = new(1,1);
         private IEnumerable<ITypeFactory> typeFactories;
         private bool disposedValue;
         private readonly string addy;
@@ -48,17 +48,17 @@ namespace KubeMQ.Contract.SDK.Connection
                 addy = $"http://{match.Groups[2].Value}";
             subscriptions = new();
             typeFactories = Array.Empty<ITypeFactory>();
-            dataLock.EnterWriteLock();
+            dataLock.Wait();
             try
             {
                 client = EstablishConnection();
             }
             catch (Exception)
             {
-                dataLock.ExitWriteLock();
+                dataLock.Release();
                 throw;
             }
-            dataLock.ExitWriteLock();
+            dataLock.Release();
         }
 
         private void Log(LogLevel level, string message, params object[]? args)
@@ -82,16 +82,16 @@ namespace KubeMQ.Contract.SDK.Connection
 
         private IMessageFactory<T> GetMessageFactory<T>(bool ignoreMessageHeader=false) 
         {
-            dataLock.EnterReadLock();
+            dataLock.Wait();
             var result = (IMessageFactory<T>?)typeFactories.FirstOrDefault(fact => fact.GetType().GetGenericArguments()[0]==typeof(T));
-            dataLock.ExitReadLock();
+            dataLock.Release();
             if (result==null)
             {
                 result = new TypeFactory<T>(globalMessageEncoder,globalMessageEncryptor,connectionOptions.ServiceProvider,ignoreMessageHeader,connectionOptions.DefaultRPCTimeout);
-                dataLock.EnterWriteLock();
+                dataLock.Wait();
                 if (!typeFactories.Any(fact => fact.GetType().GetGenericArguments()[0]==typeof(T) && fact.IgnoreMessageHeader==ignoreMessageHeader))
                     typeFactories = typeFactories.Concat(new ITypeFactory[] { (ITypeFactory)result });
-                dataLock.ExitWriteLock();
+                dataLock.Release();
             }
             return result;
         }
@@ -100,9 +100,9 @@ namespace KubeMQ.Contract.SDK.Connection
             where T : IMessageSubscription
         {
             sub.Start();
-            dataLock.EnterWriteLock();
+            dataLock.Wait();
             subscriptions.Add(sub);
-            dataLock.ExitWriteLock();
+            dataLock.Release();
             return sub;
         }
 
@@ -115,12 +115,12 @@ namespace KubeMQ.Contract.SDK.Connection
             {
                 if (disposing)
                 {
-                    dataLock.EnterWriteLock();
+                    dataLock.Wait();
                     foreach (var sub in subscriptions)
                         sub.Stop();
                     subscriptions.Clear();
                     client.Dispose();
-                    dataLock.ExitWriteLock();
+                    dataLock.Release();
                     dataLock.Dispose();
                 }
 
