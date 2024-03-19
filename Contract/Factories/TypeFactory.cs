@@ -35,12 +35,13 @@ namespace KubeMQ.Contract.Factories
         private readonly string messageVersion = typeof(T).GetCustomAttributes<MessageVersion>().Select(mc => mc.Version.ToString()).FirstOrDefault("0.0.0.0");
         private readonly string messageChannel = typeof(T).GetCustomAttributes<MessageChannel>().Select(mc => mc.Name).FirstOrDefault(string.Empty);
         private readonly bool stored = typeof(T).GetCustomAttributes<StoredMessage>().FirstOrDefault() != null;
-        private readonly int requestTimeout = typeof(T).GetCustomAttributes<MessageResponseTimeout>().Select(mrt => mrt.Value).FirstOrDefault(5000);
+        private readonly int requestTimeout;
 
-        public TypeFactory(IMessageEncoder? globalMessageEncoder, IMessageEncryptor? globalMessageEncryptor,IServiceProvider? serviceProvider, bool ignoreMessageHeader)
+        public TypeFactory(IMessageEncoder? globalMessageEncoder, IMessageEncryptor? globalMessageEncryptor,IServiceProvider? serviceProvider, bool ignoreMessageHeader,int? rpcTimeout)
         {
             this.globalMessageEncoder = globalMessageEncoder;
             this.globalMessageEncryptor = globalMessageEncryptor;
+            this.requestTimeout = typeof(T).GetCustomAttributes<MessageResponseTimeout>().Select(mrt => mrt.Value).FirstOrDefault(rpcTimeout??Constants.DEFAULT_RPC_TIMEOUT);
             IgnoreMessageHeader=ignoreMessageHeader;
             var types = AssemblyLoadContext.All
                 .SelectMany(context => context.Assemblies)

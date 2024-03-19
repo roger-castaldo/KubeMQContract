@@ -49,6 +49,11 @@ namespace KubeMQ.Contract
         /// </summary>
         public int MaxBodySize { get; init; } = DEFAULT_MAX_SIZE;
         /// <summary>
+        /// Timeout in milliseconds to use as a default for RPC calls if there is an override desired. 
+        /// Otherwise the default is 5000.
+        /// </summary>
+        public int? DefaultRPCTimeout { get; init; } = null;
+        /// <summary>
         /// The ILoggerProvider instance to use for logging against any connections produced by these options.
         /// </summary>
         public ILoggerProvider? Logger { get; init; } = null;
